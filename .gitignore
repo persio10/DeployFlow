@@ -9974,3 +9974,4 @@ backend/app/schemas/__pycache__/enrollment_token.cpython-314.pyc
 backend/app/schemas/__pycache__/os_image.cpython-314.pyc
 backend/app/schemas/__pycache__/script.cpython-314.pyc
 backend/app/schemas/__pycache__/software_item.cpython-314.pyc
+backend/app/api/v1/__pycache__/deployment_profiles.cpython-314.pyc
