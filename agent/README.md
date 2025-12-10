@@ -26,3 +26,11 @@ The DeployFlow.Agent project is implemented as a .NET Worker Service:
 - `DeployFlow.Agent.csproj` uses the `Microsoft.NET.Sdk.Worker` SDK.
 - `Program.cs` uses `Host.CreateApplicationBuilder` to configure services and run `AgentService`.
 - Agent logic lives in `AgentService` and `AgentApiClient`, using `Microsoft.Extensions.Hosting`, `Microsoft.Extensions.Logging`, and `Microsoft.Extensions.Options`.
+
+### Supported Action Types
+
+- `test`  
+  No-op test that always succeeds. Useful for verifying connectivity.
+
+- `powershell_inline`  
+  Runs the `payload` as a PowerShell script on the local machine (Windows only). Output and errors are captured and sent back in the action result logs.

@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -73,12 +74,75 @@ public class AgentService : BackgroundService
                 {
                     _logger.LogInformation("Received action {ActionId} of type {Type}", action.Id, action.Type);
 
+                    string status;
+                    int exitCode;
+                    string logs;
+
+                    if (string.Equals(action.Type, "test", StringComparison.OrdinalIgnoreCase))
+                    {
+                        status = "succeeded";
+                        exitCode = 0;
+                        logs = $"Test action executed on {Environment.MachineName} at {DateTimeOffset.UtcNow}. Payload: {action.Payload ?? "(none)"}";
+                    }
+                    else if (string.Equals(action.Type, "powershell_inline", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (string.IsNullOrWhiteSpace(action.Payload))
+                        {
+                            status = "failed";
+                            exitCode = 1;
+                            logs = "powershell_inline action had empty payload.";
+                        }
+                        else
+                        {
+                            try
+                            {
+                                _logger.LogInformation("Executing PowerShell script for action {ActionId}", action.Id);
+                                var result = await PowerShellExecutor.RunScriptAsync(action.Payload, stoppingToken);
+
+                                exitCode = result.ExitCode;
+                                status = exitCode == 0 ? "succeeded" : "failed";
+
+                                var combined = new StringBuilder();
+                                if (!string.IsNullOrWhiteSpace(result.Output))
+                                {
+                                    combined.AppendLine("=== STDOUT ===");
+                                    combined.AppendLine(result.Output.Trim());
+                                }
+                                if (!string.IsNullOrWhiteSpace(result.Error))
+                                {
+                                    combined.AppendLine("=== STDERR ===");
+                                    combined.AppendLine(result.Error.Trim());
+                                }
+
+                                logs = combined.ToString().Trim();
+                                if (string.IsNullOrWhiteSpace(logs))
+                                {
+                                    logs = "(no output)";
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                status = "failed";
+                                exitCode = 1;
+                                logs = $"Exception during PowerShell execution: {ex}";
+                                _logger.LogError(ex, "Error executing PowerShell script for action {ActionId}", action.Id);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        status = "failed";
+                        exitCode = 1;
+                        logs = $"Unsupported action type: {action.Type}. Payload: {action.Payload ?? "(none)"}";
+                        _logger.LogWarning("Unsupported action type {Type} for action {ActionId}", action.Type, action.Id);
+                    }
+
                     await _apiClient.SendActionResultAsync(
                         action.Id,
-                        status: "succeeded",
-                        exitCode: 0,
-                        logs: $"Stub execution for action {action.Id} of type {action.Type}",
-                        cancellationToken: stoppingToken);
+                        status,
+                        exitCode,
+                        logs,
+                        stoppingToken);
                 }
             }
 

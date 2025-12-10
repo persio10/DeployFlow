@@ -68,7 +68,8 @@ public class AgentApiClient
         {
             Status = status,
             ExitCode = exitCode,
-            Logs = logs
+            Logs = logs,
+            CompletedAt = DateTime.UtcNow
         };
 
         var response = await _httpClient.PostAsJsonAsync($"/api/v1/agent/actions/{actionId}/result", request, cancellationToken);

@@ -45,6 +45,24 @@ The backend exposes simple endpoints to queue actions for managed devices:
 
 Agents receive pending actions via `POST /api/v1/agent/heartbeat` and report results to `POST /api/v1/agent/actions/{action_id}/result`.
 
+### PowerShell Inline Actions
+
+The agent supports a simple action type for executing PowerShell on Windows devices:
+
+- `type = "powershell_inline"`
+- `payload` is a raw PowerShell script string.
+
+Example action body via `POST /api/v1/devices/{device_id}/actions`:
+
+```json
+{
+  "type": "powershell_inline",
+  "payload": "Get-Process | Select-Object -First 5"
+}
+```
+
+The agent executes the script, captures stdout/stderr, and reports back status, exit code, and logs via `POST /api/v1/agent/actions/{action_id}/result`.
+
 ### Default Enrollment Token (Development)
 
 On application startup, the backend seeds a default enrollment token if it does not already exist:
