@@ -47,3 +47,6 @@ agent/.vs/
 ########################
 dist/
 build/
+
+# Agent runtime state
+agent/DeployFlow.Agent/device_state.json
