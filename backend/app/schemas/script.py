@@ -8,6 +8,7 @@ class ScriptCreate(BaseModel):
     name: str
     description: Optional[str] = None
     language: str = "powershell"
+    target_os_type: Optional[str] = None
     content: str
 
 
@@ -16,6 +17,7 @@ class ScriptRead(BaseModel):
     name: str
     description: Optional[str]
     language: str
+    target_os_type: Optional[str]
     content: str
     created_at: datetime
     updated_at: datetime

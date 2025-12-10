@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,7 +41,14 @@ public class AgentService : BackgroundService
         else
         {
             var hostname = Environment.MachineName;
-            var registerResponse = await _apiClient.RegisterAsync(hostname, cancellationToken: cancellationToken);
+            var osDescription = RuntimeInformation.OSDescription;
+            var registerResponse = await _apiClient.RegisterAsync(
+                hostname,
+                osVersion: Environment.OSVersion.VersionString,
+                hardwareSummary: null,
+                osType: "windows",
+                osDescription: osDescription,
+                cancellationToken: cancellationToken);
             if (registerResponse == null)
             {
                 _logger.LogError("Failed to register agent. Stopping.");

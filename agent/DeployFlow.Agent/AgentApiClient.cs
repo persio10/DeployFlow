@@ -22,14 +22,22 @@ public class AgentApiClient
         _httpClient.BaseAddress = new Uri(_config.BackendBaseUrl);
     }
 
-    public async Task<AgentRegisterResponse?> RegisterAsync(string hostname, string? osVersion = null, string? hardwareSummary = null, CancellationToken cancellationToken = default)
+    public async Task<AgentRegisterResponse?> RegisterAsync(
+        string hostname,
+        string? osVersion = null,
+        string? hardwareSummary = null,
+        string? osType = null,
+        string? osDescription = null,
+        CancellationToken cancellationToken = default)
     {
         var request = new AgentRegisterRequest
         {
             EnrollmentToken = _config.EnrollmentToken,
             Hostname = hostname,
             OsVersion = osVersion,
-            HardwareSummary = hardwareSummary
+            HardwareSummary = hardwareSummary,
+            OsType = osType,
+            OsDescription = osDescription,
         };
 
         var response = await _httpClient.PostAsJsonAsync("/api/v1/agent/register", request, cancellationToken);

@@ -52,6 +52,7 @@ export default function DevicesPage() {
             <tr>
               <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">Hostname</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">Status</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">OS Type</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">Last Check-In</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">OS Version</th>
             </tr>
@@ -65,6 +66,7 @@ export default function DevicesPage() {
                 <td className="px-4 py-3 text-sm">
                   <StatusBadge status={device.status} />
                 </td>
+                <td className="px-4 py-3 text-sm text-zinc-300">{device.os_type ?? '—'}</td>
                 <td className="px-4 py-3 text-sm text-zinc-300">
                   {device.last_check_in ? new Date(device.last_check_in).toLocaleString() : '—'}
                 </td>

@@ -17,6 +17,12 @@ public class AgentRegisterRequest
 
     [JsonPropertyName("hardware_summary")]
     public string? HardwareSummary { get; set; }
+
+    [JsonPropertyName("os_type")]
+    public string? OsType { get; set; }
+
+    [JsonPropertyName("os_description")]
+    public string? OsDescription { get; set; }
 }
 
 public class AgentRegisterResponse

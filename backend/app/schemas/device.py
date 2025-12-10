@@ -8,6 +8,7 @@ class DeviceBase(BaseModel):
     hostname: str
     profile_id: Optional[int] = None
     status: Optional[str] = None
+    os_type: Optional[str] = None
     os_version: Optional[str] = None
     hardware_summary: Optional[str] = None
     last_check_in: Optional[datetime] = None
@@ -21,6 +22,7 @@ class DeviceUpdate(BaseModel):
     hostname: Optional[str] = None
     profile_id: Optional[int] = None
     status: Optional[str] = None
+    os_type: Optional[str] = None
     os_version: Optional[str] = None
     hardware_summary: Optional[str] = None
     last_check_in: Optional[datetime] = None

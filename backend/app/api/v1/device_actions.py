@@ -33,6 +33,12 @@ def create_action_for_device(device_id: int, body: ActionCreate, db: Session = D
                 detail="Script language mismatch for PowerShell action",
             )
 
+        if script.target_os_type and device.os_type and script.target_os_type != device.os_type:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Script target_os_type is not compatible with device os_type",
+            )
+
         payload = script.content
 
     if payload is None:

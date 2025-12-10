@@ -12,6 +12,7 @@ class Script(Base):
     name = Column(String(255), nullable=False, unique=True)
     description = Column(Text, nullable=True)
     language = Column(String(50), nullable=False, default="powershell")
+    target_os_type = Column(String(50), nullable=True, index=True)
     content = Column(Text, nullable=False)
 
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
