@@ -30,6 +30,10 @@ The backend exposes a simple JSON API for agents:
 - `POST /api/v1/agent/heartbeat` – send heartbeat and receive pending actions.
 - `POST /api/v1/agent/actions/{action_id}/result` – report the result of an action.
 
+An optional debug endpoint is available for quick checks:
+
+- `GET /api/v1/agent/heartbeat` – simple JSON response confirming the endpoint is alive.
+
 These endpoints enable the DeployFlow Windows agent to execute scripts and software installs on managed devices.
 
 ### Pydantic v2 Compatibility

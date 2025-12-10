@@ -22,7 +22,7 @@ from app.schemas.agent import (
     AgentRegisterResponse,
 )
 
-router = APIRouter(prefix="/api/v1/agent", tags=["agent"])
+router = APIRouter(prefix="/agent", tags=["agent"])
 
 
 @router.post("/register", response_model=AgentRegisterResponse)
@@ -58,6 +58,11 @@ def register_agent(payload: AgentRegisterRequest, db: Session = Depends(get_db))
     db.refresh(device)
 
     return AgentRegisterResponse(device_id=device.id, poll_interval_seconds=30)
+
+
+@router.get("/heartbeat", summary="Agent heartbeat debug")
+async def heartbeat_debug():
+    return {"message": "agent heartbeat endpoint is alive"}
 
 
 @router.post("/heartbeat", response_model=AgentHeartbeatResponse)
