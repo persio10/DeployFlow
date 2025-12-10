@@ -140,17 +140,16 @@ def apply_profile_to_devices(profile_id: int, body: ApplyProfileRequest, db: Ses
         for task in tasks:
             payload: str | None = None
 
-            script = None
             if task.script_id is not None:
-            script = db.query(Script).filter(Script.id == task.script_id).first()
-            if script is None:
-                continue
+                script = db.query(Script).filter(Script.id == task.script_id).first()
+                if script is None:
+                    continue
 
-            if task.action_type in ("powershell_script", "powershell_inline") and script.language != "powershell":
-                continue
+                if task.action_type in ("powershell_script", "powershell_inline") and script.language != "powershell":
+                    continue
 
-            if script.target_os_type and device.os_type and script.target_os_type != device.os_type:
-                continue
+                if script.target_os_type and device.os_type and script.target_os_type != device.os_type:
+                    continue
 
                 payload = script.content
 
