@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ProfileTaskBase(BaseModel):
@@ -17,5 +17,4 @@ class ProfileTaskCreate(ProfileTaskBase):
 class ProfileTaskRead(ProfileTaskBase):
     id: int
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

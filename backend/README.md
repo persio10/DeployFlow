@@ -31,3 +31,10 @@ The backend exposes a simple JSON API for agents:
 - `POST /api/v1/agent/actions/{action_id}/result` – report the result of an action.
 
 These endpoints enable the DeployFlow Windows agent to execute scripts and software installs on managed devices.
+
+### Pydantic v2 Compatibility
+
+The backend uses Pydantic v2:
+
+- Settings are provided by `pydantic-settings.BaseSettings` in `app/core/config.py`.
+- Schemas use `model_config = ConfigDict(from_attributes=True)` instead of `orm_mode = True`.
