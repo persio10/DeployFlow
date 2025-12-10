@@ -36,6 +36,14 @@ An optional debug endpoint is available for quick checks:
 
 These endpoints enable the DeployFlow Windows agent to execute scripts and software installs on managed devices.
 
+### Default Enrollment Token (Development)
+
+On application startup, the backend seeds a default enrollment token if it does not already exist:
+
+- Token value: `changeme` (configured by `default_enrollment_token` in `app/core/config.py`)
+
+The DeployFlow agent development configuration uses this token by default in `appsettings.json`. For production, change this value in both the backend settings and agent config, and manage tokens via a proper admin workflow.
+
 ### Pydantic v2 Compatibility
 
 The backend uses Pydantic v2:
