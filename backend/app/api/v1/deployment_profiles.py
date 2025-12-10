@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.action import ACTION_STATUS_PENDING, Action
-from app.models.deployment_profile import DeploymentProfile, ProfileTask
+from app.models.deployment_profile import DeploymentProfile
+from app.models.profile_task import ProfileTask
 from app.models.device import Device
 from app.models.script import Script
 from app.schemas.deployment_profile import (
