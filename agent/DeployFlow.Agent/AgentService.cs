@@ -77,7 +77,7 @@ public class AgentService : BackgroundService
                         action.Id,
                         status: "succeeded",
                         exitCode: 0,
-                        logs: "Stub execution - not implemented yet",
+                        logs: $"Stub execution for action {action.Id} of type {action.Type}",
                         cancellationToken: stoppingToken);
                 }
             }

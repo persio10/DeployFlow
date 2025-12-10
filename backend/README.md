@@ -36,6 +36,15 @@ An optional debug endpoint is available for quick checks:
 
 These endpoints enable the DeployFlow Windows agent to execute scripts and software installs on managed devices.
 
+## Device Actions API
+
+The backend exposes simple endpoints to queue actions for managed devices:
+
+- `POST /api/v1/devices/{device_id}/actions` – create an action for a device (e.g., run a script, install software).
+- `GET /api/v1/devices/{device_id}/actions` – list actions for a device.
+
+Agents receive pending actions via `POST /api/v1/agent/heartbeat` and report results to `POST /api/v1/agent/actions/{action_id}/result`.
+
 ### Default Enrollment Token (Development)
 
 On application startup, the backend seeds a default enrollment token if it does not already exist:

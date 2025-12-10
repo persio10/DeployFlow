@@ -4,21 +4,20 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
 
-class ActionBase(BaseModel):
-    device_id: int
+class ActionCreate(BaseModel):
     type: str
     payload: Optional[str] = None
-    status: Optional[str] = None
-    logs: Optional[str] = None
-    completed_at: Optional[datetime] = None
 
 
-class ActionCreate(ActionBase):
-    pass
-
-
-class ActionRead(ActionBase):
+class ActionRead(BaseModel):
     id: int
+    device_id: int
+    type: str
+    status: str
+    payload: Optional[str] = None
+    logs: Optional[str] = None
     created_at: datetime
+    updated_at: datetime
+    completed_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
