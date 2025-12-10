@@ -1,6 +1,6 @@
 using System;
-using System.Management.Automation;
-using System.Management.Automation.Runspaces;
+using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,57 +16,98 @@ public class PowerShellExecutionResult
 
 public static class PowerShellExecutor
 {
-    public static Task<PowerShellExecutionResult> RunScriptAsync(string script, CancellationToken cancellationToken = default)
+    public static async Task<PowerShellExecutionResult> RunScriptAsync(string script, CancellationToken cancellationToken = default)
     {
-        return Task.Run(() =>
-        {
-            using var runspace = RunspaceFactory.CreateRunspace();
-            runspace.Open();
+        var tempDir = Path.Combine(Path.GetTempPath(), "DeployFlow", "Scripts");
+        Directory.CreateDirectory(tempDir);
 
-            using var ps = PowerShell.Create();
-            ps.Runspace = runspace;
-            ps.AddScript(script);
+        var scriptFileName = $"{Guid.NewGuid():N}.ps1";
+        var scriptPath = Path.Combine(tempDir, scriptFileName);
+        await File.WriteAllTextAsync(scriptPath, script, cancellationToken);
+
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                Arguments = $"-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"{scriptPath}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            var process = new Process
+            {
+                StartInfo = psi,
+                EnableRaisingEvents = true
+            };
 
             var outputBuilder = new StringBuilder();
             var errorBuilder = new StringBuilder();
 
-            var outputCollection = new PSDataCollection<PSObject>();
-            outputCollection.DataAdded += (_, args) =>
+            process.OutputDataReceived += (_, e) =>
             {
-                var item = outputCollection[args.Index];
-                outputBuilder.AppendLine(item.ToString());
-            };
-
-            ps.Streams.Error.DataAdded += (_, args) =>
-            {
-                var item = ps.Streams.Error[args.Index];
-                errorBuilder.AppendLine(item.ToString());
-            };
-
-            IAsyncResult asyncResult = ps.BeginInvoke<PSObject, PSObject>(null, outputCollection);
-
-            while (!asyncResult.IsCompleted)
-            {
-                if (cancellationToken.IsCancellationRequested)
+                if (e.Data != null)
                 {
-                    try
-                    {
-                        ps.Stop();
-                    }
-                    catch
-                    {
-                        // ignore
-                    }
-
-                    break;
+                    outputBuilder.AppendLine(e.Data);
                 }
+            };
 
-                Thread.Sleep(50);
+            process.ErrorDataReceived += (_, e) =>
+            {
+                if (e.Data != null)
+                {
+                    errorBuilder.AppendLine(e.Data);
+                }
+            };
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            try
+            {
+                while (!process.HasExited)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            process.Kill();
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+
+                        break;
+                    }
+
+                    await Task.Delay(100, cancellationToken);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                try
+                {
+                    if (!process.HasExited)
+                    {
+                        process.Kill();
+                    }
+                }
+                catch
+                {
+                    // ignore cleanup failures
+                }
             }
 
-            ps.EndInvoke(asyncResult);
+            if (!process.HasExited)
+            {
+                process.WaitForExit();
+            }
 
-            int exitCode = ps.HadErrors ? 1 : 0;
+            var exitCode = process.ExitCode;
 
             return new PowerShellExecutionResult
             {
@@ -74,6 +115,20 @@ public static class PowerShellExecutor
                 Output = outputBuilder.ToString().Trim(),
                 Error = errorBuilder.ToString().Trim()
             };
-        }, cancellationToken);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(scriptPath))
+                {
+                    File.Delete(scriptPath);
+                }
+            }
+            catch
+            {
+                // ignore cleanup failures
+            }
+        }
     }
 }
