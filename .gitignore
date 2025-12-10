@@ -9963,3 +9963,14 @@ web/node_modules/undici-types/util.d.ts
 web/node_modules/undici-types/webidl.d.ts
 web/node_modules/undici-types/websocket.d.ts
 web/package-lock.json
+backend/app/models/__pycache__/script.cpython-314.pyc
+backend/app/models/__pycache__/software_item.cpython-314.pyc
+backend/app/schemas/__pycache__/__init__.cpython-314.pyc
+backend/app/schemas/__pycache__/action.cpython-314.pyc
+backend/app/schemas/__pycache__/agent.cpython-314.pyc
+backend/app/schemas/__pycache__/deployment_profile.cpython-314.pyc
+backend/app/schemas/__pycache__/device.cpython-314.pyc
+backend/app/schemas/__pycache__/enrollment_token.cpython-314.pyc
+backend/app/schemas/__pycache__/os_image.cpython-314.pyc
+backend/app/schemas/__pycache__/script.cpython-314.pyc
+backend/app/schemas/__pycache__/software_item.cpython-314.pyc
