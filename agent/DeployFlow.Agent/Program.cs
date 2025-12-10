@@ -1,12 +1,11 @@
 using DeployFlow.Agent;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-IHost host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices(services =>
-    {
-        services.AddHostedService<AgentService>();
-    })
-    .Build();
+var builder = Host.CreateApplicationBuilder(args);
 
-await host.RunAsync();
+builder.Services.Configure<AgentConfig>(builder.Configuration.GetSection("Agent"));
+builder.Services.AddHttpClient<AgentApiClient>();
+builder.Services.AddHostedService<AgentService>();
+
+var host = builder.Build();
+host.Run();
