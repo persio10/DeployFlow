@@ -19,6 +19,8 @@ The agent now integrates with the DeployFlow backend via the agent API:
 
 Device id is cached locally in `device_state.json` (path configurable in `Agent.DeviceStateFile`), and heartbeats run on a configurable interval (default 30 seconds).
 
+If the backend returns `404 Device not found` during a heartbeat (for example, if devices are purged server-side), the agent automatically re-registers and updates the cached device id before resuming normal heartbeats.
+
 ### .NET Worker Service
 
 The DeployFlow.Agent project is implemented as a .NET Worker Service:
