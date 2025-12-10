@@ -182,6 +182,17 @@ Templates reuse the deployment profile model with `is_template = true` and can b
 - `GET /api/v1/templates/{id}` – get a template (including tasks).
 - `POST /api/v1/templates/{id}/instantiate` – clone a template into a regular deployment profile (optionally overriding `name` and `description`).
 
+### Dev SQLite reset
+
+If SQLAlchemy models change and you see `sqlite3 no such column` errors locally, you can reset the development SQLite database (destructive) and recreate tables from the current models:
+
+```bash
+cd backend
+python -m scripts.reset_dev_db
+```
+
+Use this only for local development databases where data loss is acceptable.
+
 ### Default Enrollment Token (Development)
 
 On application startup, the backend seeds a default enrollment token if it does not already exist:
