@@ -1,13 +1,29 @@
 from datetime import datetime
+from typing import Optional
+
 from pydantic import BaseModel
 
 
 class DeviceBase(BaseModel):
     hostname: str
+    profile_id: Optional[int] = None
+    status: Optional[str] = None
+    os_version: Optional[str] = None
+    hardware_summary: Optional[str] = None
+    last_check_in: Optional[datetime] = None
 
 
 class DeviceCreate(DeviceBase):
     pass
+
+
+class DeviceUpdate(BaseModel):
+    hostname: Optional[str] = None
+    profile_id: Optional[int] = None
+    status: Optional[str] = None
+    os_version: Optional[str] = None
+    hardware_summary: Optional[str] = None
+    last_check_in: Optional[datetime] = None
 
 
 class DeviceRead(DeviceBase):
