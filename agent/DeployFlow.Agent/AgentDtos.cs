@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace DeployFlow.Agent;
 
 public class AgentRegisterRequest
