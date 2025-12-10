@@ -35,7 +35,8 @@ public class AgentApiClient
         var response = await _httpClient.PostAsJsonAsync("/api/v1/agent/register", request, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("Agent register failed with status {StatusCode}", response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogError("Agent register failed with status {StatusCode}. Body: {Body}", response.StatusCode, body);
             return null;
         }
 
@@ -53,7 +54,8 @@ public class AgentApiClient
         var response = await _httpClient.PostAsJsonAsync("/api/v1/agent/heartbeat", request, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("Heartbeat failed with status {StatusCode}", response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogError("Heartbeat failed with status {StatusCode}. Body: {Body}", response.StatusCode, body);
             return null;
         }
 
@@ -72,7 +74,8 @@ public class AgentApiClient
         var response = await _httpClient.PostAsJsonAsync($"/api/v1/agent/actions/{actionId}/result", request, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("Posting action result for {ActionId} failed with {StatusCode}", actionId, response.StatusCode);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogError("Posting action result for {ActionId} failed with {StatusCode}. Body: {Body}", actionId, response.StatusCode, body);
             return false;
         }
 
