@@ -9,6 +9,8 @@ class AgentRegisterRequest(BaseModel):
     hostname: str
     os_version: Optional[str] = None
     hardware_summary: Optional[str] = None
+    os_type: Optional[str] = None
+    os_description: Optional[str] = None
 
 
 class AgentRegisterResponse(BaseModel):

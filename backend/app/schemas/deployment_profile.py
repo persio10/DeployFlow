@@ -1,17 +1,35 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
+
+
+class ProfileTaskBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    order_index: int = 0
+    action_type: str = "powershell_inline"
+    script_id: Optional[int] = None
+    continue_on_error: bool = True
+
+
+class ProfileTaskCreate(ProfileTaskBase):
+    pass
+
+
+class ProfileTaskRead(ProfileTaskBase):
+    id: int
+    profile_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DeploymentProfileBase(BaseModel):
     name: str
     description: Optional[str] = None
-    tags: Optional[str] = None
-    os_image_id: Optional[int] = None
-    computer_naming_pattern: Optional[str] = None
-    admin_credentials_ref: Optional[str] = None
-    agent_auto_install: bool = True
+    target_os_type: Optional[str] = None
     is_template: bool = False
 
 
@@ -25,3 +43,7 @@ class DeploymentProfileRead(DeploymentProfileBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DeploymentProfileWithTasks(DeploymentProfileRead):
+    tasks: List[ProfileTaskRead] = []

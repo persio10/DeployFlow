@@ -44,6 +44,7 @@ export default function ScriptsPage() {
               <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">Name</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">Description</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">Language</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">Target OS</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">Actions</th>
             </tr>
           </thead>
@@ -53,6 +54,7 @@ export default function ScriptsPage() {
                 <td className="px-4 py-3 text-sm font-medium text-zinc-100">{script.name}</td>
                 <td className="px-4 py-3 text-sm text-zinc-300">{script.description ?? '—'}</td>
                 <td className="px-4 py-3 text-sm text-zinc-300">{script.language}</td>
+                <td className="px-4 py-3 text-sm text-zinc-300">{script.target_os_type ?? 'Any'}</td>
                 <td className="px-4 py-3 text-sm text-blue-300">
                   <button
                     className="rounded-md px-3 py-1 text-sm font-semibold hover:bg-blue-500/10 hover:text-blue-200"
@@ -65,7 +67,7 @@ export default function ScriptsPage() {
             ))}
             {!loading && !error && scripts.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-sm text-zinc-400">
+                <td colSpan={5} className="px-4 py-6 text-center text-sm text-zinc-400">
                   No scripts yet. Add one via the backend API.
                 </td>
               </tr>
@@ -81,6 +83,7 @@ export default function ScriptsPage() {
               <div>
                 <h3 className="text-lg font-semibold">{selectedScript.name}</h3>
                 <p className="text-xs text-zinc-400">Language: {selectedScript.language}</p>
+                <p className="text-xs text-zinc-500">Target OS: {selectedScript.target_os_type ?? 'Any'}</p>
               </div>
               <button
                 onClick={() => setSelectedScript(null)}

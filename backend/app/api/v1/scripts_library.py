@@ -39,6 +39,7 @@ def create_script(body: ScriptCreate, db: Session = Depends(get_db)):
         name=body.name,
         description=body.description,
         language=body.language,
+        target_os_type=body.target_os_type,
         content=body.content,
     )
     db.add(script)

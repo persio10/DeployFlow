@@ -12,6 +12,7 @@ class Device(Base):
     hostname = Column(String, nullable=False, unique=True)
     profile_id = Column(Integer, ForeignKey("deployment_profiles.id"), nullable=True)
     status = Column(String, nullable=False, default="unknown")
+    os_type = Column(String(50), nullable=True, index=True)
     os_version = Column(String, nullable=True)
     hardware_summary = Column(Text, nullable=True)
     last_check_in = Column(DateTime(timezone=True), nullable=True)

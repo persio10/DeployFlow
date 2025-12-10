@@ -39,16 +39,19 @@ def register_agent(payload: AgentRegisterRequest, db: Session = Depends(get_db))
 
     now = datetime.utcnow()
     device = db.query(Device).filter(Device.hostname == payload.hostname).first()
+    os_type = payload.os_type or "windows"
     if device:
         device.os_version = payload.os_version
         device.hardware_summary = payload.hardware_summary
         device.last_check_in = now
         device.status = "online"
+        device.os_type = payload.os_type or device.os_type or "windows"
     else:
         device = Device(
             hostname=payload.hostname,
             os_version=payload.os_version,
             hardware_summary=payload.hardware_summary,
+            os_type=os_type,
             status="online",
             last_check_in=now,
         )

@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,21 +40,11 @@ public class AgentService : BackgroundService
         }
         else
         {
-            var hostname = Environment.MachineName;
-            var registerResponse = await _apiClient.RegisterAsync(hostname, cancellationToken: cancellationToken);
-            if (registerResponse == null)
+            var registered = await RegisterAndPersistAsync(cancellationToken);
+            if (!registered)
             {
                 _logger.LogError("Failed to register agent. Stopping.");
                 throw new Exception("Registration failed");
-            }
-
-            _deviceId = registerResponse.DeviceId;
-            _stateStore.Save(new DeviceState { DeviceId = _deviceId });
-            _logger.LogInformation("Registered new device id: {DeviceId}", _deviceId);
-
-            if (registerResponse.PollIntervalSeconds > 0)
-            {
-                _config.PollIntervalSeconds = registerResponse.PollIntervalSeconds;
             }
         }
 
@@ -64,9 +55,42 @@ public class AgentService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            if (_deviceId == 0)
+            {
+                _logger.LogWarning("Device id missing; attempting registration before heartbeat.");
+                var registered = await RegisterAndPersistAsync(stoppingToken);
+                if (!registered)
+                {
+                    _logger.LogError("Registration failed; will retry after delay.");
+                    await Task.Delay(TimeSpan.FromSeconds(_config.PollIntervalSeconds), stoppingToken);
+                    continue;
+                }
+            }
+
             _logger.LogInformation("Sending heartbeat for device {DeviceId}", _deviceId);
 
-            var heartbeatResponse = await _apiClient.HeartbeatAsync(_deviceId, stoppingToken);
+            AgentHeartbeatResponse? heartbeatResponse = null;
+            try
+            {
+                heartbeatResponse = await _apiClient.HeartbeatAsync(_deviceId, stoppingToken);
+            }
+            catch (AgentApiClient.DeviceNotFoundException)
+            {
+                _logger.LogWarning("Heartbeat returned 404; device not found in backend. Re-registering...");
+                _deviceId = 0;
+                var registered = await RegisterAndPersistAsync(stoppingToken);
+                if (registered)
+                {
+                    _logger.LogInformation("Re-registered successfully as device ID {DeviceId}", _deviceId);
+                }
+                else
+                {
+                    _logger.LogError("Re-registration failed; will retry after delay.");
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(_config.PollIntervalSeconds), stoppingToken);
+                continue;
+            }
 
             if (heartbeatResponse?.Actions != null && heartbeatResponse.Actions.Count > 0)
             {
@@ -148,5 +172,34 @@ public class AgentService : BackgroundService
 
             await Task.Delay(TimeSpan.FromSeconds(_config.PollIntervalSeconds), stoppingToken);
         }
+    }
+
+    private async Task<bool> RegisterAndPersistAsync(CancellationToken cancellationToken)
+    {
+        var hostname = Environment.MachineName;
+        var osDescription = RuntimeInformation.OSDescription;
+        var registerResponse = await _apiClient.RegisterAsync(
+            hostname,
+            osVersion: Environment.OSVersion.VersionString,
+            hardwareSummary: null,
+            osType: "windows",
+            osDescription: osDescription,
+            cancellationToken: cancellationToken);
+
+        if (registerResponse == null)
+        {
+            return false;
+        }
+
+        _deviceId = registerResponse.DeviceId;
+        _stateStore.Save(new DeviceState { DeviceId = _deviceId });
+        _logger.LogInformation("Registered new device id: {DeviceId}", _deviceId);
+
+        if (registerResponse.PollIntervalSeconds > 0)
+        {
+            _config.PollIntervalSeconds = registerResponse.PollIntervalSeconds;
+        }
+
+        return true;
     }
 }

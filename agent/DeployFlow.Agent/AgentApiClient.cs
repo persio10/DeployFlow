@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading;
@@ -22,14 +23,22 @@ public class AgentApiClient
         _httpClient.BaseAddress = new Uri(_config.BackendBaseUrl);
     }
 
-    public async Task<AgentRegisterResponse?> RegisterAsync(string hostname, string? osVersion = null, string? hardwareSummary = null, CancellationToken cancellationToken = default)
+    public async Task<AgentRegisterResponse?> RegisterAsync(
+        string hostname,
+        string? osVersion = null,
+        string? hardwareSummary = null,
+        string? osType = null,
+        string? osDescription = null,
+        CancellationToken cancellationToken = default)
     {
         var request = new AgentRegisterRequest
         {
             EnrollmentToken = _config.EnrollmentToken,
             Hostname = hostname,
             OsVersion = osVersion,
-            HardwareSummary = hardwareSummary
+            HardwareSummary = hardwareSummary,
+            OsType = osType,
+            OsDescription = osDescription,
         };
 
         var response = await _httpClient.PostAsJsonAsync("/api/v1/agent/register", request, cancellationToken);
@@ -52,6 +61,13 @@ public class AgentApiClient
         };
 
         var response = await _httpClient.PostAsJsonAsync("/api/v1/agent/heartbeat", request, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogWarning("Heartbeat returned 404 for device {DeviceId}. Body: {Body}", deviceId, body);
+            throw new DeviceNotFoundException("Device not found during heartbeat");
+        }
+
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -81,5 +97,12 @@ public class AgentApiClient
         }
 
         return true;
+    }
+
+    public class DeviceNotFoundException : Exception
+    {
+        public DeviceNotFoundException(string message) : base(message)
+        {
+        }
     }
 }
