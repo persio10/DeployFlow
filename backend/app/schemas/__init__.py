@@ -6,3 +6,11 @@ from app.schemas.os_image import OSImageCreate, OSImageRead  # noqa: F401
 from app.schemas.profile_task import ProfileTaskCreate, ProfileTaskRead  # noqa: F401
 from app.schemas.script import ScriptCreate, ScriptRead  # noqa: F401
 from app.schemas.software_item import SoftwareItemCreate, SoftwareItemRead  # noqa: F401
+from app.schemas.agent import (  # noqa: F401
+    AgentRegisterRequest,
+    AgentRegisterResponse,
+    AgentHeartbeatRequest,
+    AgentHeartbeatResponse,
+    AgentActionPayload,
+    AgentActionResultRequest,
+)
