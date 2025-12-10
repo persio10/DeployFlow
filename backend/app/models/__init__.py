@@ -1,0 +1,9 @@
+from app.db import Base  # noqa: F401
+from app.models.action import Action  # noqa: E402,F401
+from app.models.deployment_profile import DeploymentProfile  # noqa: E402,F401
+from app.models.device import Device  # noqa: E402,F401
+from app.models.enrollment_token import EnrollmentToken  # noqa: E402,F401
+from app.models.os_image import OSImage  # noqa: E402,F401
+from app.models.profile_task import ProfileTask  # noqa: E402,F401
+from app.models.script import Script  # noqa: E402,F401
+from app.models.software_item import SoftwareItem  # noqa: E402,F401
