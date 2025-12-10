@@ -3,14 +3,11 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { fetchDevices, Device } from '@/lib/api'
+import { DeviceStatusBadge } from '@/components/DeviceStatusBadge'
 
-function StatusBadge({ status }: { status: string }) {
-  const color = status.toLowerCase() === 'online' ? 'text-emerald-400 bg-emerald-400/10' : 'text-amber-300 bg-amber-300/10'
-  return (
-    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${color}`}>
-      {status || 'unknown'}
-    </span>
-  )
+function formatDate(value?: string | null) {
+  if (!value) return '—'
+  return new Date(value).toLocaleString()
 }
 
 export default function DevicesPage() {
@@ -35,53 +32,62 @@ export default function DevicesPage() {
   }, [])
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Devices</h1>
-        <p className="text-sm text-zinc-400">Enrolled endpoints reporting in via the DeployFlow agent.</p>
-      </div>
-
-      <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40">
-        <div className="border-b border-zinc-800 px-4 py-3 text-sm text-zinc-400">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Devices</h1>
+          <p className="text-sm text-zinc-400">All enrolled endpoints reporting in via the DeployFlow agent.</p>
+        </div>
+        <div className="rounded-md bg-zinc-900/70 px-3 py-2 text-xs text-zinc-300">
           {loading && 'Loading devices…'}
-          {error && !loading && <span className="text-rose-400">{error}</span>}
+          {!loading && error && <span className="text-rose-400">{error}</span>}
           {!loading && !error && `${devices.length} device${devices.length === 1 ? '' : 's'}`}
         </div>
-        <table className="min-w-full divide-y divide-zinc-800">
-          <thead className="bg-zinc-900/60">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">Hostname</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">Status</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">OS Type</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">Last Check-In</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-300">OS Version</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-800">
-            {devices.map((device) => (
-              <tr key={device.id} className="hover:bg-zinc-800/40">
-                <td className="px-4 py-3 text-sm font-medium text-blue-300">
-                  <Link href={`/devices/${device.id}`}>{device.hostname}</Link>
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  <StatusBadge status={device.status} />
-                </td>
-                <td className="px-4 py-3 text-sm text-zinc-300">{device.os_type ?? '—'}</td>
-                <td className="px-4 py-3 text-sm text-zinc-300">
-                  {device.last_check_in ? new Date(device.last_check_in).toLocaleString() : '—'}
-                </td>
-                <td className="px-4 py-3 text-sm text-zinc-300">{device.os_version ?? '—'}</td>
-              </tr>
-            ))}
-            {!loading && !error && devices.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-sm text-zinc-400">
-                  No devices yet. Agents will appear here after registering.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        {devices.map((device) => (
+          <div
+            key={device.id}
+            className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:shadow-lg"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1">
+                <Link href={`/devices/${device.id}`} className="text-lg font-semibold text-blue-200 hover:text-white">
+                  {device.hostname}
+                </Link>
+                <p className="text-xs text-zinc-500">ID: {device.id}</p>
+              </div>
+              <DeviceStatusBadge status={device.status} osType={device.os_type} lastCheckIn={device.last_check_in} />
+            </div>
+
+            <dl className="mt-4 grid gap-2 text-sm text-zinc-300">
+              <div className="flex items-center justify-between rounded-md bg-zinc-900/60 px-3 py-2">
+                <dt className="text-zinc-400">OS Version</dt>
+                <dd className="text-zinc-100">{device.os_version ?? '—'}</dd>
+              </div>
+              <div className="flex items-center justify-between rounded-md bg-zinc-900/60 px-3 py-2">
+                <dt className="text-zinc-400">Last Check-In</dt>
+                <dd className="text-zinc-100">{formatDate(device.last_check_in)}</dd>
+              </div>
+            </dl>
+
+            <div className="mt-4 flex justify-end">
+              <Link
+                href={`/devices/${device.id}`}
+                className="rounded-md bg-blue-500 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600"
+              >
+                View
+              </Link>
+            </div>
+          </div>
+        ))}
+
+        {!loading && !error && devices.length === 0 && (
+          <div className="col-span-full rounded-lg border border-dashed border-zinc-800 bg-zinc-900/40 p-6 text-center text-sm text-zinc-400">
+            No devices yet. Agents will appear here after registering.
+          </div>
+        )}
       </div>
     </div>
   )
