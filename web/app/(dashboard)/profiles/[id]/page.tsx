@@ -55,9 +55,16 @@ export default function ProfileDetailPage() {
           <h1 className="text-2xl font-semibold">{profile.name}</h1>
           <p className="text-sm text-zinc-400">Profile ID: {profile.id}</p>
         </div>
-        <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-100">
-          Target OS: {profile.target_os_type ?? 'Any'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-100">
+            Target OS: {profile.target_os_type ?? 'Any'}
+          </span>
+          {profile.is_template && (
+            <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-100">
+              Template
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

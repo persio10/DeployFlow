@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.db import Base
@@ -13,6 +13,9 @@ class DeploymentProfile(Base):
     name = Column(String(255), nullable=False, unique=True)
     description = Column(Text, nullable=True)
     target_os_type = Column(String(50), nullable=True, index=True)
+    is_template = Column(
+        Boolean, nullable=False, default=False, server_default="0", index=True
+    )
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(
         DateTime,

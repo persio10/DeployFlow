@@ -124,11 +124,11 @@ If `script_id` is provided, the backend loads the script content and stores it i
 
 ## Deployment Profiles
 
-Deployment profiles group ordered tasks that can be applied to one or more devices.
+Deployment profiles group ordered tasks that can be applied to one or more devices. Profiles can also be stored as templates (using the `is_template` flag) and later instantiated into regular profiles for editing and application.
 
 Key fields:
 
-- `DeploymentProfile`: `name`, `description`, `target_os_type`, timestamps.
+- `DeploymentProfile`: `name`, `description`, `target_os_type`, `is_template`, timestamps.
 - `ProfileTask`: `name`, `description`, `order_index`, `action_type` (e.g. `powershell_inline`), `script_id`, `continue_on_error`, timestamps.
 
 ### Deployment Profile API
@@ -171,6 +171,16 @@ Apply profile to a device:
   "device_ids": [1]
 }
 ```
+
+## Templates
+
+Templates reuse the deployment profile model with `is_template = true` and can be cloned into editable profiles.
+
+### Template API
+
+- `GET /api/v1/templates` – list templates.
+- `GET /api/v1/templates/{id}` – get a template (including tasks).
+- `POST /api/v1/templates/{id}/instantiate` – clone a template into a regular deployment profile (optionally overriding `name` and `description`).
 
 ### Default Enrollment Token (Development)
 

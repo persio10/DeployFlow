@@ -40,6 +40,7 @@ def create_profile(body: DeploymentProfileCreate, db: Session = Depends(get_db))
         name=body.name,
         description=body.description,
         target_os_type=body.target_os_type,
+        is_template=body.is_template,
     )
     db.add(profile)
     db.commit()

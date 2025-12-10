@@ -30,6 +30,7 @@ class DeploymentProfileBase(BaseModel):
     name: str
     description: Optional[str] = None
     target_os_type: Optional[str] = None
+    is_template: bool = False
 
 
 class DeploymentProfileCreate(DeploymentProfileBase):

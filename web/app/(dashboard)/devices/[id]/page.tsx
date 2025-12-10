@@ -86,7 +86,7 @@ export default function DeviceDetailPage() {
     setProfileModalOpen(true)
     try {
       const data = await fetchProfiles()
-      setProfiles(data)
+      setProfiles(data.filter((profile) => !profile.is_template))
     } catch (err) {
       setProfileError(err instanceof Error ? err.message : 'Failed to load profiles')
     }

@@ -7,6 +7,7 @@ from app.api.v1 import (
     devices,
     scripts_library,
     software,
+    templates,
 )
 
 router = APIRouter()
@@ -17,6 +18,7 @@ router.include_router(deployment_profiles.router)
 router.include_router(devices.router)
 router.include_router(device_actions.router)
 router.include_router(agent.router)
+router.include_router(templates.router)
 
 
 @router.get("/health")

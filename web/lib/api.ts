@@ -41,6 +41,7 @@ export interface DeploymentProfile {
   name: string
   description?: string | null
   target_os_type?: string | null
+  is_template: boolean
   created_at: string
   updated_at: string
 }
@@ -60,6 +61,11 @@ export interface ProfileTask {
 
 export interface DeploymentProfileWithTasks extends DeploymentProfile {
   tasks: ProfileTask[]
+}
+
+export interface TemplateInstantiateBody {
+  name?: string
+  description?: string
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
@@ -125,4 +131,26 @@ export async function applyProfile(profileId: number, deviceId: number): Promise
     body: JSON.stringify({ device_ids: [deviceId] }),
   })
   await handleResponse<{ created_actions: number }>(res)
+}
+
+export async function fetchTemplates(): Promise<DeploymentProfile[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/templates`, { cache: 'no-store' })
+  return handleResponse<DeploymentProfile[]>(res)
+}
+
+export async function fetchTemplate(templateId: number): Promise<DeploymentProfileWithTasks> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/templates/${templateId}`, { cache: 'no-store' })
+  return handleResponse<DeploymentProfileWithTasks>(res)
+}
+
+export async function instantiateTemplate(
+  templateId: number,
+  body: TemplateInstantiateBody
+): Promise<DeploymentProfileWithTasks> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/templates/${templateId}/instantiate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return handleResponse<DeploymentProfileWithTasks>(res)
 }

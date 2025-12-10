@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { DeploymentProfile, fetchProfiles } from '@/lib/api'
+import { DeploymentProfile, fetchTemplates } from '@/lib/api'
 
 function TargetBadge({ value }: { value?: string | null }) {
   return (
@@ -12,20 +12,18 @@ function TargetBadge({ value }: { value?: string | null }) {
   )
 }
 
-export default function ProfilesPage() {
-  const [profiles, setProfiles] = useState<DeploymentProfile[]>([])
+export default function TemplatesPage() {
+  const [templates, setTemplates] = useState<DeploymentProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  const visibleProfiles = profiles.filter((profile) => !profile.is_template)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await fetchProfiles()
-        setProfiles(data)
+        const data = await fetchTemplates()
+        setTemplates(data)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load profiles')
+        setError(err instanceof Error ? err.message : 'Failed to load templates')
       } finally {
         setLoading(false)
       }
@@ -38,41 +36,41 @@ export default function ProfilesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Deployment Profiles</h1>
-          <p className="text-sm text-zinc-400">Reusable task sequences for building or configuring devices.</p>
+          <h1 className="text-2xl font-semibold">Templates</h1>
+          <p className="text-sm text-zinc-400">Reusable blueprints for cloning deployment profiles.</p>
         </div>
         <div className="rounded-md bg-zinc-900/70 px-3 py-2 text-xs text-zinc-300">
-          {loading && 'Loading profiles…'}
+          {loading && 'Loading templates…'}
           {!loading && error && <span className="text-rose-400">{error}</span>}
-          {!loading && !error && `${visibleProfiles.length} profile${visibleProfiles.length === 1 ? '' : 's'}`}
+          {!loading && !error && `${templates.length} template${templates.length === 1 ? '' : 's'}`}
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {visibleProfiles.map((profile) => (
+        {templates.map((template) => (
           <div
-            key={profile.id}
+            key={template.id}
             className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-500/50 hover:shadow-lg"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <Link href={`/profiles/${profile.id}`} className="text-lg font-semibold text-blue-200 hover:text-white">
-                  {profile.name}
+                <Link href={`/templates/${template.id}`} className="text-lg font-semibold text-blue-200 hover:text-white">
+                  {template.name}
                 </Link>
-                <p className="mt-1 text-sm text-zinc-400">{profile.description ?? 'No description'}</p>
+                <p className="mt-1 text-sm text-zinc-400">{template.description ?? 'No description'}</p>
               </div>
-              <TargetBadge value={profile.target_os_type} />
+              <TargetBadge value={template.target_os_type} />
             </div>
             <div className="flex items-center justify-between text-xs text-zinc-400">
-              <span>ID: {profile.id}</span>
-              <span>{profile.created_at ? new Date(profile.created_at).toLocaleString() : '—'}</span>
+              <span>ID: {template.id}</span>
+              <span>{template.created_at ? new Date(template.created_at).toLocaleString() : '—'}</span>
             </div>
           </div>
         ))}
 
-        {!loading && !error && visibleProfiles.length === 0 && (
+        {!loading && !error && templates.length === 0 && (
           <div className="col-span-full rounded-lg border border-dashed border-zinc-800 bg-zinc-900/40 p-6 text-center text-sm text-zinc-400">
-            No deployment profiles yet. Create one via the API to get started.
+            No templates yet. Create a template via the API, then instantiate it into a profile.
           </div>
         )}
       </div>
