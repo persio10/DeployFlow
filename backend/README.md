@@ -193,6 +193,20 @@ python -m scripts.reset_dev_db
 
 Use this only for local development databases where data loss is acceptable.
 
+### Dev seed helper
+
+If you need quick sample data (script + baseline profile) in a local SQLite dev
+database, run the optional seeding helper:
+
+```bash
+cd backend
+python -m scripts.seed_dev_data
+```
+
+This creates a "Ping WAN (Windows)" script and a "Baseline Windows Profile"
+with a single task that references that script. It is intended for development
+only and assumes it is safe to insert sample data into your dev database.
+
 ### Default Enrollment Token (Development)
 
 On application startup, the backend seeds a default enrollment token if it does not already exist:

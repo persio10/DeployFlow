@@ -1,8 +1,10 @@
-'use client'
+"use client"
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { DeploymentProfile, fetchProfiles } from '@/lib/api'
+import { ProfileEditorModal } from '@/components/ProfileEditorModal'
 
 function TargetBadge({ value }: { value?: string | null }) {
   return (
@@ -16,6 +18,8 @@ export default function ProfilesPage() {
   const [profiles, setProfiles] = useState<DeploymentProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const router = useRouter()
 
   const visibleProfiles = profiles.filter((profile) => !profile.is_template)
 
@@ -36,15 +40,23 @@ export default function ProfilesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Deployment Profiles</h1>
           <p className="text-sm text-zinc-400">Reusable task sequences for building or configuring devices.</p>
         </div>
-        <div className="rounded-md bg-zinc-900/70 px-3 py-2 text-xs text-zinc-300">
-          {loading && 'Loading profiles…'}
-          {!loading && error && <span className="text-rose-400">{error}</span>}
-          {!loading && !error && `${visibleProfiles.length} profile${visibleProfiles.length === 1 ? '' : 's'}`}
+        <div className="flex items-center gap-3">
+          <div className="rounded-md bg-zinc-900/70 px-3 py-2 text-xs text-zinc-300">
+            {loading && 'Loading profiles…'}
+            {!loading && error && <span className="text-rose-400">{error}</span>}
+            {!loading && !error && `${visibleProfiles.length} profile${visibleProfiles.length === 1 ? '' : 's'}`}
+          </div>
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600"
+          >
+            New Profile
+          </button>
         </div>
       </div>
 
@@ -72,10 +84,16 @@ export default function ProfilesPage() {
 
         {!loading && !error && visibleProfiles.length === 0 && (
           <div className="col-span-full rounded-lg border border-dashed border-zinc-800 bg-zinc-900/40 p-6 text-center text-sm text-zinc-400">
-            No deployment profiles yet. Create one via the API to get started.
+            No deployment profiles yet. Use “New Profile” to build one.
           </div>
         )}
       </div>
+
+      <ProfileEditorModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={(id) => router.push(`/profiles/${id}`)}
+      />
     </div>
   )
 }

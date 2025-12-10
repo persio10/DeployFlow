@@ -43,6 +43,10 @@ export function LogsModal({ action, onClose }: LogsModalProps) {
             <p className="text-xs uppercase tracking-wide text-zinc-500">Payload</p>
             <p className="break-words text-zinc-100">{action.payload ?? '—'}</p>
           </div>
+          <div className="space-y-1 rounded-md bg-zinc-900/50 p-3">
+            <p className="text-xs uppercase tracking-wide text-zinc-500">Exit code</p>
+            <p className="font-semibold">{action.exit_code ?? '—'}</p>
+          </div>
         </div>
 
         <div className="mt-4 rounded-md border border-zinc-800 bg-zinc-950/80">

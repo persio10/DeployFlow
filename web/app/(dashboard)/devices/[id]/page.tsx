@@ -76,7 +76,13 @@ export default function DeviceDetailPage() {
     setScriptModalOpen(true)
     try {
       const data = await fetchScripts()
-      setScripts(data)
+      const filtered = device?.os_type
+        ? data.filter((s) => !s.target_os_type || s.target_os_type === device.os_type)
+        : data
+      setScripts(filtered)
+      if (filtered.length === 0) {
+        setActionError('No compatible scripts for this device OS. Create one first.')
+      }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to load scripts')
     }
@@ -86,7 +92,15 @@ export default function DeviceDetailPage() {
     setProfileModalOpen(true)
     try {
       const data = await fetchProfiles()
-      setProfiles(data.filter((profile) => !profile.is_template))
+      const compatible = data.filter((profile) => {
+        if (profile.is_template) return false
+        if (!device?.os_type || !profile.target_os_type) return true
+        return profile.target_os_type === device.os_type
+      })
+      setProfiles(compatible)
+      if (compatible.length === 0) {
+        setProfileError('No compatible profiles available for this device OS.')
+      }
     } catch (err) {
       setProfileError(err instanceof Error ? err.message : 'Failed to load profiles')
     }

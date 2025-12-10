@@ -1,8 +1,10 @@
-'use client'
+"use client"
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { DeploymentProfile, fetchTemplates } from '@/lib/api'
+import { ProfileEditorModal } from '@/components/ProfileEditorModal'
 
 function TargetBadge({ value }: { value?: string | null }) {
   return (
@@ -16,6 +18,8 @@ export default function TemplatesPage() {
   const [templates, setTemplates] = useState<DeploymentProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     const load = async () => {
@@ -34,15 +38,23 @@ export default function TemplatesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Templates</h1>
           <p className="text-sm text-zinc-400">Reusable blueprints for cloning deployment profiles.</p>
         </div>
-        <div className="rounded-md bg-zinc-900/70 px-3 py-2 text-xs text-zinc-300">
-          {loading && 'Loading templates…'}
-          {!loading && error && <span className="text-rose-400">{error}</span>}
-          {!loading && !error && `${templates.length} template${templates.length === 1 ? '' : 's'}`}
+        <div className="flex items-center gap-3">
+          <div className="rounded-md bg-zinc-900/70 px-3 py-2 text-xs text-zinc-300">
+            {loading && 'Loading templates…'}
+            {!loading && error && <span className="text-rose-400">{error}</span>}
+            {!loading && !error && `${templates.length} template${templates.length === 1 ? '' : 's'}`}
+          </div>
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600"
+          >
+            New Template
+          </button>
         </div>
       </div>
 
@@ -70,10 +82,17 @@ export default function TemplatesPage() {
 
         {!loading && !error && templates.length === 0 && (
           <div className="col-span-full rounded-lg border border-dashed border-zinc-800 bg-zinc-900/40 p-6 text-center text-sm text-zinc-400">
-            No templates yet. Create a template via the API, then instantiate it into a profile.
+            No templates yet. Use “New Template” to add one, then instantiate it into a profile when ready.
           </div>
         )}
       </div>
+
+      <ProfileEditorModal
+        open={createOpen}
+        mode="template"
+        onClose={() => setCreateOpen(false)}
+        onCreated={(id) => router.push(`/templates/${id}`)}
+      />
     </div>
   )
 }

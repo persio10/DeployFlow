@@ -20,6 +20,7 @@ export interface Action {
   status: string
   payload?: string | null
   logs?: string | null
+  exit_code?: number | null
   created_at: string
   updated_at: string
   completed_at?: string | null
@@ -36,6 +37,14 @@ export interface Script {
   updated_at: string
 }
 
+export interface ScriptCreateInput {
+  name: string
+  description?: string | null
+  language?: string
+  target_os_type?: string | null
+  content: string
+}
+
 export interface DeploymentProfile {
   id: number
   name: string
@@ -44,6 +53,13 @@ export interface DeploymentProfile {
   is_template: boolean
   created_at: string
   updated_at: string
+}
+
+export interface DeploymentProfileCreateInput {
+  name: string
+  description?: string | null
+  target_os_type?: string | null
+  is_template?: boolean
 }
 
 export interface ProfileTask {
@@ -57,6 +73,15 @@ export interface ProfileTask {
   continue_on_error: boolean
   created_at: string
   updated_at: string
+}
+
+export interface ProfileTaskCreateInput {
+  name: string
+  description?: string | null
+  order_index?: number
+  action_type?: string
+  script_id?: number | null
+  continue_on_error?: boolean
 }
 
 export interface DeploymentProfileWithTasks extends DeploymentProfile {
@@ -114,14 +139,44 @@ export async function fetchScript(scriptId: number): Promise<Script> {
   return handleResponse<Script>(res)
 }
 
+export async function createScript(body: ScriptCreateInput): Promise<Script> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/scripts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return handleResponse<Script>(res)
+}
+
 export async function fetchProfiles(): Promise<DeploymentProfile[]> {
   const res = await fetch(`${API_BASE_URL}/api/v1/profiles`, { cache: 'no-store' })
   return handleResponse<DeploymentProfile[]>(res)
 }
 
+export async function createProfile(body: DeploymentProfileCreateInput): Promise<DeploymentProfile> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/profiles`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return handleResponse<DeploymentProfile>(res)
+}
+
 export async function fetchProfile(profileId: number): Promise<DeploymentProfileWithTasks> {
   const res = await fetch(`${API_BASE_URL}/api/v1/profiles/${profileId}`, { cache: 'no-store' })
   return handleResponse<DeploymentProfileWithTasks>(res)
+}
+
+export async function createProfileTask(
+  profileId: number,
+  body: ProfileTaskCreateInput
+): Promise<ProfileTask> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/profiles/${profileId}/tasks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return handleResponse<ProfileTask>(res)
 }
 
 export async function applyProfile(profileId: number, deviceId: number): Promise<void> {
