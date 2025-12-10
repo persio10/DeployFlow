@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 class ActionCreate(BaseModel):
     type: str
     payload: Optional[str] = None
+    script_id: Optional[int] = None
 
 
 class ActionRead(BaseModel):

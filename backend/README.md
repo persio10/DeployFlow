@@ -63,6 +63,59 @@ Example action body via `POST /api/v1/devices/{device_id}/actions`:
 
 The agent executes the script, captures stdout/stderr, and reports back status, exit code, and logs via `POST /api/v1/agent/actions/{action_id}/result`.
 
+## Script Library
+
+DeployFlow includes a basic Script Library for reusable automation:
+
+- `Script` model:
+  - `name` – unique name for the script.
+  - `description` – optional description.
+  - `language` – e.g. `powershell`.
+  - `content` – the script body.
+
+### Script API
+
+- `GET /api/v1/scripts` – list all scripts.
+- `GET /api/v1/scripts/{id}` – get a script by id.
+- `POST /api/v1/scripts` – create a new script.
+
+Example `POST /api/v1/scripts` body:
+
+```json
+{
+  "name": "Get Top Processes",
+  "description": "List the top 3 processes by memory usage",
+  "language": "powershell",
+  "content": "Get-Process | Sort-Object WorkingSet -Descending | Select-Object -First 3 | Format-Table -AutoSize"
+}
+```
+
+### Using scripts with device actions
+
+The Device Actions API supports both inline payloads and script references:
+
+`POST /api/v1/devices/{device_id}/actions`
+
+Inline:
+
+```json
+{
+  "type": "powershell_inline",
+  "payload": "Get-Process | Select-Object -First 3"
+}
+```
+
+Script library:
+
+```json
+{
+  "type": "powershell_inline",
+  "script_id": 1
+}
+```
+
+If `script_id` is provided, the backend loads the script content and stores it in the action payload before it is sent to the agent.
+
 ### Default Enrollment Token (Development)
 
 On application startup, the backend seeds a default enrollment token if it does not already exist:

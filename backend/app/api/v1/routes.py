@@ -1,10 +1,10 @@
 from fastapi import APIRouter
 
-from app.api.v1 import agent, device_actions, devices, scripts, software
+from app.api.v1 import agent, device_actions, devices, scripts_library, software
 
 router = APIRouter()
 
-router.include_router(scripts.router)
+router.include_router(scripts_library.router)
 router.include_router(software.router)
 router.include_router(devices.router)
 router.include_router(device_actions.router)

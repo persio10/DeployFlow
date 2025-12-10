@@ -4,19 +4,19 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
 
-class ScriptBase(BaseModel):
+class ScriptCreate(BaseModel):
     name: str
     description: Optional[str] = None
-    body: str
-    tags: Optional[str] = None
+    language: str = "powershell"
+    content: str
 
 
-class ScriptCreate(ScriptBase):
-    pass
-
-
-class ScriptRead(ScriptBase):
+class ScriptRead(BaseModel):
     id: int
+    name: str
+    description: Optional[str]
+    language: str
+    content: str
     created_at: datetime
     updated_at: datetime
 
