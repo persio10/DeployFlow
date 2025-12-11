@@ -1,29 +1,27 @@
 # DeployFlow Fleet Web
 
-This is the Next.js dark-mode-first admin UI for DeployFlow Fleet.
+Next.js 14 (App Router) dark-mode-first admin UI for DeployFlow Fleet.
 
 ## Getting Started
-
 ```bash
 cd web
 npm install
 npm run dev
 ```
+- Backend API defaults to `http://localhost:8000`; override with `NEXT_PUBLIC_API_BASE_URL`.
 
-- Backend API is expected at `http://localhost:8000` (override via `NEXT_PUBLIC_API_BASE_URL`).
-- Key pages:
-  - `/devices` — list enrolled devices with status and last check-in.
-  - `/devices/[id]` — device detail with recent actions, **Run Script** modal (script library), **Apply Profile** flow, action status badges, and log viewer.
-  - `/scripts` — view scripts available in the backend script library and create new entries.
-- `/profiles` — list deployment profiles with target OS badges (templates are hidden here by default) and create new profiles with tasks.
-- `/profiles/[id]` — profile detail with task listing and target OS context.
-- `/templates` — list template profiles (or create new ones) that can be cloned.
-- `/templates/[id]` — template detail with tasks and a **Use this template** flow that instantiates a new deployment profile.
+## Key Pages & Flows
+- **/devices** — list enrolled devices (filters out deleted), OS/status badges, last check-in, links to detail.
+- **/devices/[id]** — device summary, actions table with status badges + logs modal, Run Script modal (script library), Apply Profile modal, and Delete Device (queues backend uninstall action and redirects to list).
+- **/scripts** — script library CRUD (create/edit/delete), language + target OS dropdowns, content viewer/editor, inline validation.
+- **/scripts/[id]** — detail view with edit/delete controls.
+- **/profiles** — lists deployment profiles (non-templates) with target OS badges; create/edit/delete via profile editor modal with task sequencing from script library.
+- **/profiles/[id]** — profile detail, tasks table, edit/delete actions, apply-from-device supported via device page.
+- **/templates** — template profiles (is_template=true) with target OS badges; create/edit/delete; templates can be instantiated into new profiles.
+- **/templates/[id]** — template detail, tasks table, edit/delete, “Use this template” to instantiate and redirect to the new profile.
 
 ## UI Notes
-
-- Dark-mode-first layout with sidebar navigation and status badges.
-- Actions history includes colored status indicators and a logs modal for inspecting outputs.
-- Device pages surface OS type/last check-in, plus profile application and script execution controls (including applying a profile created from a template).
-- Profile and template builders include task sequencing from the script library; scripts can be created directly from the Scripts page.
-- Configure backend URL with `NEXT_PUBLIC_API_BASE_URL` if the API is not on `http://localhost:8000`.
+- Dark layout with sidebar navigation, top nav, status badges (device/action), and reusable modals (script editor, profile editor, logs viewer).
+- Target OS selections use shared dropdown options (`windows`, `windows_server`, `ubuntu`, `debian`, `proxmox`, `rhel`, `centos`, `macos`, `other`).
+- Device deletion confirms before calling backend and shows a toast after success or failure.
+- Actions history includes colored status indicators and logs modal for inspecting stdout/stderr and exit codes returned by the agent.
