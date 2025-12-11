@@ -1,21 +1,42 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { createScript, fetchScripts, Script, TargetOsType } from '@/lib/api'
+import ScriptModal from '@/components/ScriptModal'
+import { deleteScript, fetchScripts, Script, TargetOsType } from '@/lib/api'
+
+function formatTargetOs(value?: TargetOsType | null) {
+  if (!value) return 'Any OS'
+  switch (value) {
+    case 'windows':
+      return 'Windows'
+    case 'linux':
+      return 'Linux'
+    case 'macos':
+      return 'macOS'
+    case 'proxmox':
+      return 'Proxmox'
+    default:
+      return 'Other'
+  }
+}
+
+function TargetOsBadge({ value }: { value?: TargetOsType | null }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-zinc-700 px-2 py-0.5 text-xs font-medium text-zinc-200">
+      {formatTargetOs(value)}
+    </span>
+  )
+}
 
 export default function ScriptsPage() {
   const [scripts, setScripts] = useState<Script[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedScript, setSelectedScript] = useState<Script | null>(null)
-  const [createOpen, setCreateOpen] = useState(false)
-  const [formName, setFormName] = useState('')
-  const [formDescription, setFormDescription] = useState('')
-  const [formLanguage, setFormLanguage] = useState('powershell')
-  const [formTargetOs, setFormTargetOs] = useState<TargetOsType | ''>('')
-  const [formContent, setFormContent] = useState('')
-  const [formError, setFormError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [viewScript, setViewScript] = useState<Script | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
+  const [editingScript, setEditingScript] = useState<Script | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -33,64 +54,31 @@ export default function ScriptsPage() {
     load()
   }, [])
 
-  const resetForm = () => {
-    setFormName('')
-    setFormDescription('')
-    setFormLanguage('powershell')
-    setFormTargetOs('')
-    setFormContent('')
-    setFormError(null)
+  const upsertScript = (updated: Script) => {
+    setScripts((prev) => {
+      const exists = prev.some((s) => s.id === updated.id)
+      if (exists) {
+        return prev.map((s) => (s.id === updated.id ? updated : s))
+      }
+      return [updated, ...prev]
+    })
   }
 
-  const handleCreateScript = async () => {
-    if (!formName.trim() || !formContent.trim()) {
-      setFormError('Name and content are required')
-      return
-    }
+  const handleSaved = (saved: Script) => {
+    upsertScript(saved)
+    setModalOpen(false)
+    setEditingScript(null)
+  }
 
-    setSubmitting(true)
-    setFormError(null)
+  const handleDeleteScript = async (script: Script) => {
+    const confirmed = window.confirm(`Delete script "${script.name}"? This cannot be undone.`)
+    if (!confirmed) return
     try {
-      await createScript({
-        name: formName.trim(),
-        description: formDescription.trim() || undefined,
-        language: formLanguage,
-        target_os_type: formTargetOs || undefined,
-        content: formContent,
-      })
-      const data = await fetchScripts()
-      setScripts(data)
-      resetForm()
-      setCreateOpen(false)
+      await deleteScript(script.id)
+      setScripts((prev) => prev.filter((s) => s.id !== script.id))
+      setActionError(null)
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Failed to create script')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const targetOsOptions: { label: string; value: TargetOsType | '' }[] = [
-    { label: 'Any OS', value: '' },
-    { label: 'Windows', value: 'windows' },
-    { label: 'Linux', value: 'linux' },
-    { label: 'macOS', value: 'macos' },
-    { label: 'Proxmox', value: 'proxmox' },
-    { label: 'Other', value: 'other' },
-  ]
-
-  const formatTargetOs = (value?: TargetOsType | null) => {
-    if (!value) return 'Any OS'
-    switch (value) {
-      case 'windows':
-        return 'Windows'
-      case 'linux':
-        return 'Linux'
-      case 'macos':
-        return 'macOS'
-      case 'proxmox':
-        return 'Proxmox'
-      default:
-        return 'Other'
+      setActionError(err instanceof Error ? err.message : 'Failed to delete script')
     }
   }
 
@@ -102,12 +90,22 @@ export default function ScriptsPage() {
           <p className="text-sm text-zinc-400">Reusable automation snippets from the script library.</p>
         </div>
         <button
-          onClick={() => setCreateOpen(true)}
+          onClick={() => {
+            setModalMode('create')
+            setEditingScript(null)
+            setModalOpen(true)
+          }}
           className="rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600"
         >
           New Script
         </button>
       </div>
+
+      {(error || actionError) && (
+        <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+          {error || actionError}
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/40">
         <div className="border-b border-zinc-800 px-4 py-3 text-sm text-zinc-400">
@@ -131,14 +129,34 @@ export default function ScriptsPage() {
                 <td className="px-4 py-3 text-sm font-medium text-zinc-100">{script.name}</td>
                 <td className="px-4 py-3 text-sm text-zinc-300">{script.description ?? '—'}</td>
                 <td className="px-4 py-3 text-sm text-zinc-300">{script.language}</td>
-                <td className="px-4 py-3 text-sm text-zinc-300">{formatTargetOs(script.target_os_type)}</td>
+                <td className="px-4 py-3 text-sm text-zinc-300">
+                  <TargetOsBadge value={script.target_os_type} />
+                </td>
                 <td className="px-4 py-3 text-sm text-blue-300">
-                  <button
-                    className="rounded-md px-3 py-1 text-sm font-semibold hover:bg-blue-500/10 hover:text-blue-200"
-                    onClick={() => setSelectedScript(script)}
-                  >
-                    View
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      className="rounded-md px-3 py-1 text-sm font-semibold hover:bg-blue-500/10 hover:text-blue-200"
+                      onClick={() => setViewScript(script)}
+                    >
+                      View
+                    </button>
+                    <button
+                      className="rounded-md px-3 py-1 text-sm font-semibold text-amber-200 hover:bg-amber-500/10"
+                      onClick={() => {
+                        setModalMode('edit')
+                        setEditingScript(script)
+                        setModalOpen(true)
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="rounded-md px-3 py-1 text-sm font-semibold text-rose-200 hover:bg-rose-500/10"
+                      onClick={() => handleDeleteScript(script)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -153,118 +171,35 @@ export default function ScriptsPage() {
         </table>
       </div>
 
-      {createOpen && (
-        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-2xl rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">New Script</h3>
-              <button onClick={() => setCreateOpen(false)} className="text-sm text-zinc-400 hover:text-white">
-                Close
-              </button>
-            </div>
+      <ScriptModal
+        open={modalOpen}
+        mode={modalMode}
+        initialScript={editingScript}
+        onClose={() => {
+          setModalOpen(false)
+          setEditingScript(null)
+        }}
+        onSaved={handleSaved}
+      />
 
-            <div className="mt-4 space-y-4 text-sm text-zinc-200">
-              {formError && <div className="rounded-md bg-rose-500/10 px-3 py-2 text-rose-200">{formError}</div>}
-
-              <label className="space-y-1">
-                <span className="text-xs uppercase tracking-wide text-zinc-400">Name</span>
-                <input
-                  type="text"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                />
-              </label>
-
-              <label className="space-y-1">
-                <span className="text-xs uppercase tracking-wide text-zinc-400">Description</span>
-                <input
-                  type="text"
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                />
-              </label>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="space-y-1">
-                  <span className="text-xs uppercase tracking-wide text-zinc-400">Language</span>
-                  <select
-                    value={formLanguage}
-                    onChange={(e) => setFormLanguage(e.target.value)}
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="powershell">powershell</option>
-                    <option value="bash">bash</option>
-                  </select>
-                </label>
-
-                <label className="space-y-1">
-                  <span className="text-xs uppercase tracking-wide text-zinc-400">Target OS</span>
-                  <select
-                    value={formTargetOs}
-                    onChange={(e) => setFormTargetOs(e.target.value as TargetOsType | '')}
-                    className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                  >
-                    {targetOsOptions.map((option) => (
-                      <option key={option.label} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <label className="space-y-1">
-                <span className="text-xs uppercase tracking-wide text-zinc-400">Content</span>
-                <textarea
-                  value={formContent}
-                  onChange={(e) => setFormContent(e.target.value)}
-                  className="min-h-[160px] w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                />
-              </label>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  onClick={() => {
-                    resetForm()
-                    setCreateOpen(false)
-                  }}
-                  className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreateScript}
-                  disabled={submitting}
-                  className="rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {submitting ? 'Saving…' : 'Create script'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {selectedScript && (
+      {viewScript && (
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/60 px-4">
           <div className="w-full max-w-2xl rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">{selectedScript.name}</h3>
-                <p className="text-xs text-zinc-400">Language: {selectedScript.language}</p>
-                <p className="text-xs text-zinc-500">Target OS: {formatTargetOs(selectedScript.target_os_type)}</p>
+                <h3 className="text-lg font-semibold">{viewScript.name}</h3>
+                <p className="text-xs text-zinc-400">Language: {viewScript.language}</p>
+                <p className="text-xs text-zinc-500">Target OS: {formatTargetOs(viewScript.target_os_type)}</p>
               </div>
               <button
-                onClick={() => setSelectedScript(null)}
+                onClick={() => setViewScript(null)}
                 className="text-sm text-zinc-400 hover:text-white"
               >
                 Close
               </button>
             </div>
             <div className="mt-4 rounded-md border border-zinc-800 bg-black/30 p-3 text-sm text-zinc-100">
-              <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed">{selectedScript.content}</pre>
+              <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed">{viewScript.content}</pre>
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
 
 export type TargetOsType = 'windows' | 'linux' | 'macos' | 'proxmox' | 'other'
+export type ScriptLanguage = 'powershell' | 'bash'
 
 export interface Device {
   id: number
@@ -32,7 +33,7 @@ export interface Script {
   id: number
   name: string
   description?: string | null
-  language: string
+  language: ScriptLanguage
   target_os_type?: TargetOsType | null
   content: string
   created_at: string
@@ -42,9 +43,17 @@ export interface Script {
 export interface ScriptCreateInput {
   name: string
   description?: string | null
-  language?: string
+  language?: ScriptLanguage
   target_os_type?: TargetOsType | null
   content: string
+}
+
+export interface ScriptUpdateInput {
+  name?: string
+  description?: string | null
+  language?: ScriptLanguage
+  target_os_type?: TargetOsType | null
+  content?: string
 }
 
 export interface DeploymentProfile {
@@ -148,6 +157,24 @@ export async function createScript(body: ScriptCreateInput): Promise<Script> {
     body: JSON.stringify(body),
   })
   return handleResponse<Script>(res)
+}
+
+export async function updateScript(scriptId: number, body: ScriptUpdateInput): Promise<Script> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/scripts/${scriptId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return handleResponse<Script>(res)
+}
+
+export async function deleteScript(scriptId: number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/scripts/${scriptId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const text = await res.text()
+    const message = text || res.statusText
+    throw new Error(`API error (${res.status}): ${message}`)
+  }
 }
 
 export async function fetchProfiles(): Promise<DeploymentProfile[]> {

@@ -5,3 +5,8 @@ ALLOWED_OS_TYPES = (
     "proxmox",
     "other",
 )
+
+ALLOWED_SCRIPT_LANGUAGES = (
+    "powershell",
+    "bash",
+)
