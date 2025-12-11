@@ -75,6 +75,13 @@ export interface DeploymentProfileCreateInput {
   is_template?: boolean
 }
 
+export interface DeploymentProfileUpdateInput {
+  name?: string
+  description?: string | null
+  target_os_type?: TargetOsType | null
+  is_template?: boolean
+}
+
 export interface ProfileTask {
   id: number
   profile_id: number
@@ -193,9 +200,30 @@ export async function createProfile(body: DeploymentProfileCreateInput): Promise
   return handleResponse<DeploymentProfile>(res)
 }
 
+export async function updateProfile(
+  profileId: number,
+  body: DeploymentProfileUpdateInput
+): Promise<DeploymentProfile> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/profiles/${profileId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return handleResponse<DeploymentProfile>(res)
+}
+
 export async function fetchProfile(profileId: number): Promise<DeploymentProfileWithTasks> {
   const res = await fetch(`${API_BASE_URL}/api/v1/profiles/${profileId}`, { cache: 'no-store' })
   return handleResponse<DeploymentProfileWithTasks>(res)
+}
+
+export async function deleteProfile(profileId: number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/profiles/${profileId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const text = await res.text()
+    const message = text || res.statusText
+    throw new Error(`API error (${res.status}): ${message}`)
+  }
 }
 
 export async function createProfileTask(
@@ -239,4 +267,25 @@ export async function instantiateTemplate(
     body: JSON.stringify(body),
   })
   return handleResponse<DeploymentProfileWithTasks>(res)
+}
+
+export async function updateTemplate(
+  templateId: number,
+  body: DeploymentProfileUpdateInput
+): Promise<DeploymentProfile> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/templates/${templateId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return handleResponse<DeploymentProfile>(res)
+}
+
+export async function deleteTemplate(templateId: number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/templates/${templateId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const text = await res.text()
+    const message = text || res.statusText
+    throw new Error(`API error (${res.status}): ${message}`)
+  }
 }

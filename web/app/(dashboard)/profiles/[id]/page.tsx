@@ -1,8 +1,9 @@
 'use client'
 
 import { useMemo, useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
-import { DeploymentProfileWithTasks, fetchProfile } from '@/lib/api'
+import { useParams, useRouter } from 'next/navigation'
+import { DeploymentProfileWithTasks, deleteProfile, fetchProfile } from '@/lib/api'
+import { ProfileEditorModal } from '@/components/ProfileEditorModal'
 import { formatTargetOs } from '@/lib/osTypes'
 
 function formatDate(value?: string | null) {
@@ -13,6 +14,7 @@ function formatDate(value?: string | null) {
 
 export default function ProfileDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const paramId = params?.id
   const profileId = useMemo(() => {
     const value = Array.isArray(paramId) ? paramId[0] : paramId
@@ -22,6 +24,8 @@ export default function ProfileDetailPage() {
   const [profile, setProfile] = useState<DeploymentProfileWithTasks | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   useEffect(() => {
     if (Number.isNaN(profileId)) return
@@ -49,6 +53,18 @@ export default function ProfileDetailPage() {
     return <div className="text-sm text-rose-400">{error ?? 'Profile not found'}</div>
   }
 
+  const handleDelete = async () => {
+    if (!profile) return
+    const confirmed = window.confirm(`Delete profile "${profile.name}"? This cannot be undone.`)
+    if (!confirmed) return
+    try {
+      await deleteProfile(profile.id)
+      router.push('/profiles')
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to delete profile')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-5 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -57,7 +73,7 @@ export default function ProfileDetailPage() {
           <h1 className="text-2xl font-semibold">{profile.name}</h1>
           <p className="text-sm text-zinc-400">Profile ID: {profile.id}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-100">
             Target OS: {formatTargetOs(profile.target_os_type)}
           </span>
@@ -66,8 +82,24 @@ export default function ProfileDetailPage() {
               Template
             </span>
           )}
+          <button
+            onClick={() => setEditOpen(true)}
+            className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-500/20"
+          >
+            Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="rounded-md border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-100 hover:bg-rose-500/20"
+          >
+            Delete
+          </button>
         </div>
       </div>
+
+      {actionError && (
+        <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{actionError}</div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
@@ -123,6 +155,17 @@ export default function ProfileDetailPage() {
           </div>
         </div>
       </div>
+
+      <ProfileEditorModal
+        open={editOpen}
+        variant="edit"
+        initialProfile={profile}
+        onClose={() => setEditOpen(false)}
+        onSaved={(updated) => {
+          setProfile((prev) => (prev ? { ...prev, ...updated } : prev))
+          setEditOpen(false)
+        }}
+      />
     </div>
   )
 }

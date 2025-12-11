@@ -1,5 +1,6 @@
 "use client"
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import ScriptModal from '@/components/ScriptModal'
 import { deleteScript, fetchScripts, Script } from '@/lib/api'
@@ -111,7 +112,11 @@ export default function ScriptsPage() {
           <tbody className="divide-y divide-zinc-800">
             {scripts.map((script) => (
               <tr key={script.id} className="hover:bg-zinc-800/40">
-                <td className="px-4 py-3 text-sm font-medium text-zinc-100">{script.name}</td>
+                <td className="px-4 py-3 text-sm font-medium text-zinc-100">
+                  <Link href={`/scripts/${script.id}`} className="text-blue-200 hover:text-white">
+                    {script.name}
+                  </Link>
+                </td>
                 <td className="px-4 py-3 text-sm text-zinc-300">{script.description ?? '—'}</td>
                 <td className="px-4 py-3 text-sm text-zinc-300">{script.language}</td>
                 <td className="px-4 py-3 text-sm text-zinc-300">

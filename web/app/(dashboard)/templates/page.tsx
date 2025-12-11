@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { DeploymentProfile, fetchTemplates } from '@/lib/api'
+import { DeploymentProfile, deleteTemplate, fetchTemplates } from '@/lib/api'
 import { ProfileEditorModal } from '@/components/ProfileEditorModal'
 import { formatTargetOs } from '@/lib/osTypes'
 
@@ -20,6 +20,9 @@ export default function TemplatesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<DeploymentProfile | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -36,6 +39,18 @@ export default function TemplatesPage() {
 
     load()
   }, [])
+
+  const handleDelete = async (template: DeploymentProfile) => {
+    const confirmed = window.confirm(`Delete template "${template.name}"? This cannot be undone.`)
+    if (!confirmed) return
+    try {
+      await deleteTemplate(template.id)
+      setTemplates((prev) => prev.filter((t) => t.id !== template.id))
+      setActionError(null)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to delete template')
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -59,6 +74,10 @@ export default function TemplatesPage() {
         </div>
       </div>
 
+      {actionError && (
+        <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{actionError}</div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {templates.map((template) => (
           <div
@@ -78,6 +97,23 @@ export default function TemplatesPage() {
               <span>ID: {template.id}</span>
               <span>{template.created_at ? new Date(template.created_at).toLocaleString() : '—'}</span>
             </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <button
+                className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-amber-100 hover:bg-amber-500/20"
+                onClick={() => {
+                  setEditingTemplate(template)
+                  setEditOpen(true)
+                }}
+              >
+                Edit
+              </button>
+              <button
+                className="rounded-md border border-rose-400/30 bg-rose-500/10 px-3 py-1 text-rose-100 hover:bg-rose-500/20"
+                onClick={() => handleDelete(template)}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         ))}
 
@@ -93,6 +129,22 @@ export default function TemplatesPage() {
         mode="template"
         onClose={() => setCreateOpen(false)}
         onCreated={(id) => router.push(`/templates/${id}`)}
+      />
+
+      <ProfileEditorModal
+        open={editOpen}
+        mode="template"
+        variant="edit"
+        initialProfile={editingTemplate}
+        onClose={() => {
+          setEditOpen(false)
+          setEditingTemplate(null)
+        }}
+        onSaved={(updated) => {
+          setTemplates((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)))
+          setEditingTemplate(null)
+          setEditOpen(false)
+        }}
       />
     </div>
   )

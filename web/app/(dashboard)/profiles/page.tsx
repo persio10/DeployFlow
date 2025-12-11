@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { DeploymentProfile, fetchProfiles } from '@/lib/api'
+import { DeploymentProfile, deleteProfile, fetchProfiles } from '@/lib/api'
 import { ProfileEditorModal } from '@/components/ProfileEditorModal'
 import { formatTargetOs } from '@/lib/osTypes'
 
@@ -20,6 +20,9 @@ export default function ProfilesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editingProfile, setEditingProfile] = useState<DeploymentProfile | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const router = useRouter()
 
   const visibleProfiles = profiles.filter((profile) => !profile.is_template)
@@ -38,6 +41,18 @@ export default function ProfilesPage() {
 
     load()
   }, [])
+
+  const handleDelete = async (profile: DeploymentProfile) => {
+    const confirmed = window.confirm(`Delete profile "${profile.name}"? This cannot be undone.`)
+    if (!confirmed) return
+    try {
+      await deleteProfile(profile.id)
+      setProfiles((prev) => prev.filter((p) => p.id !== profile.id))
+      setActionError(null)
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to delete profile')
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -61,6 +76,10 @@ export default function ProfilesPage() {
         </div>
       </div>
 
+      {actionError && (
+        <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{actionError}</div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {visibleProfiles.map((profile) => (
           <div
@@ -80,6 +99,23 @@ export default function ProfilesPage() {
               <span>ID: {profile.id}</span>
               <span>{profile.created_at ? new Date(profile.created_at).toLocaleString() : '—'}</span>
             </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <button
+                className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-amber-100 hover:bg-amber-500/20"
+                onClick={() => {
+                  setEditingProfile(profile)
+                  setEditOpen(true)
+                }}
+              >
+                Edit
+              </button>
+              <button
+                className="rounded-md border border-rose-400/30 bg-rose-500/10 px-3 py-1 text-rose-100 hover:bg-rose-500/20"
+                onClick={() => handleDelete(profile)}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         ))}
 
@@ -94,6 +130,21 @@ export default function ProfilesPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreated={(id) => router.push(`/profiles/${id}`)}
+      />
+
+      <ProfileEditorModal
+        open={editOpen}
+        variant="edit"
+        initialProfile={editingProfile}
+        onClose={() => {
+          setEditOpen(false)
+          setEditingProfile(null)
+        }}
+        onSaved={(updated) => {
+          setProfiles((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)))
+          setEditingProfile(null)
+          setEditOpen(false)
+        }}
       />
     </div>
   )

@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { DeploymentProfileWithTasks, fetchTemplate, instantiateTemplate } from '@/lib/api'
+import {
+  DeploymentProfileWithTasks,
+  deleteTemplate,
+  fetchTemplate,
+  instantiateTemplate,
+} from '@/lib/api'
+import { ProfileEditorModal } from '@/components/ProfileEditorModal'
 import { formatTargetOs } from '@/lib/osTypes'
 
 function formatDate(value?: string | null) {
@@ -30,12 +36,14 @@ export default function TemplateDetailPage() {
   const [template, setTemplate] = useState<DeploymentProfileWithTasks | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const [instantiateModalOpen, setInstantiateModalOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDescription, setNewDescription] = useState('')
   const [instantiating, setInstantiating] = useState(false)
   const [instantiateError, setInstantiateError] = useState<string | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
 
   useEffect(() => {
     if (Number.isNaN(templateId)) return
@@ -74,6 +82,18 @@ export default function TemplateDetailPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!template) return
+    const confirmed = window.confirm(`Delete template "${template.name}"? This cannot be undone.`)
+    if (!confirmed) return
+    try {
+      await deleteTemplate(template.id)
+      router.push('/templates')
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to delete template')
+    }
+  }
+
   if (loading) {
     return <div className="text-sm text-zinc-300">Loading template…</div>
   }
@@ -101,8 +121,24 @@ export default function TemplateDetailPage() {
           >
             Use this template
           </button>
+          <button
+            onClick={() => setEditOpen(true)}
+            className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-100 hover:bg-amber-500/20"
+          >
+            Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="rounded-md border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-100 hover:bg-rose-500/20"
+          >
+            Delete
+          </button>
         </div>
       </div>
+
+      {actionError && (
+        <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">{actionError}</div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-4">
@@ -212,6 +248,18 @@ export default function TemplateDetailPage() {
           </div>
         </div>
       )}
+
+      <ProfileEditorModal
+        open={editOpen}
+        mode="template"
+        variant="edit"
+        initialProfile={template}
+        onClose={() => setEditOpen(false)}
+        onSaved={(updated) => {
+          setTemplate((prev) => (prev ? { ...prev, ...updated } : prev))
+          setEditOpen(false)
+        }}
+      />
     </div>
   )
 }
