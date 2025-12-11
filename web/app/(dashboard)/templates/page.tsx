@@ -6,10 +6,26 @@ import { useRouter } from 'next/navigation'
 import { DeploymentProfile, fetchTemplates } from '@/lib/api'
 import { ProfileEditorModal } from '@/components/ProfileEditorModal'
 
+function formatTargetOs(value?: string | null) {
+  if (!value) return 'Any OS'
+  switch (value) {
+    case 'windows':
+      return 'Windows'
+    case 'linux':
+      return 'Linux'
+    case 'macos':
+      return 'macOS'
+    case 'proxmox':
+      return 'Proxmox'
+    default:
+      return 'Other'
+  }
+}
+
 function TargetBadge({ value }: { value?: string | null }) {
   return (
     <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs font-semibold text-zinc-200">
-      {value ?? 'Any OS'}
+      {formatTargetOs(value)}
     </span>
   )
 }

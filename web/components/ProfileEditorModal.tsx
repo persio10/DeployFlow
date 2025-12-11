@@ -8,9 +8,16 @@ import {
   DeploymentProfileCreateInput,
   ProfileTaskCreateInput,
   Script,
+  TargetOsType,
 } from '@/lib/api'
 
-const osOptions = ['windows', 'linux', 'proxmox', 'macos', 'other']
+const osOptions: { value: 'windows' | 'linux' | 'macos' | 'proxmox' | 'other'; label: string }[] = [
+  { value: 'windows', label: 'Windows' },
+  { value: 'linux', label: 'Linux' },
+  { value: 'macos', label: 'macOS' },
+  { value: 'proxmox', label: 'Proxmox' },
+  { value: 'other', label: 'Other' },
+]
 
 export type ProfileEditorMode = 'profile' | 'template'
 
@@ -40,7 +47,7 @@ function defaultTask(order: number): TaskInput {
 export function ProfileEditorModal({ open, onClose, onCreated, mode = 'profile' }: ProfileEditorModalProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [targetOsType, setTargetOsType] = useState<string>('')
+  const [targetOsType, setTargetOsType] = useState<TargetOsType | ''>('')
   const [isTemplate, setIsTemplate] = useState<boolean>(mode === 'template')
   const [tasks, setTasks] = useState<TaskInput[]>([defaultTask(0)])
 
@@ -165,13 +172,13 @@ export function ProfileEditorModal({ open, onClose, onCreated, mode = 'profile' 
               <span className="text-xs uppercase tracking-wide text-zinc-400">Target OS</span>
               <select
                 value={targetOsType}
-                onChange={(e) => setTargetOsType(e.target.value)}
+                onChange={(e) => setTargetOsType(e.target.value as TargetOsType | '')}
                 className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
               >
                 <option value="">Any</option>
-                {osOptions.map((os) => (
-                  <option key={os} value={os}>
-                    {os}
+                {osOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
