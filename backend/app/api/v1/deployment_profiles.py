@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core.constants import ALLOWED_OS_TYPES
 from app.db import get_db
 from app.models.action import ACTION_STATUS_PENDING, Action
 from app.models.deployment_profile import DeploymentProfile
@@ -34,6 +35,12 @@ def create_profile(body: DeploymentProfileCreate, db: Session = Depends(get_db))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Profile with this name already exists",
+        )
+
+    if body.target_os_type is not None and body.target_os_type not in ALLOWED_OS_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"target_os_type must be one of {', '.join(ALLOWED_OS_TYPES)}",
         )
 
     profile = DeploymentProfile(

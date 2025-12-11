@@ -1,10 +1,12 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
 
+export type TargetOsType = 'windows' | 'linux' | 'macos' | 'proxmox' | 'other'
+
 export interface Device {
   id: number
   hostname: string
   status: string
-  os_type?: string | null
+  os_type?: TargetOsType | null
   os_version?: string | null
   last_check_in?: string | null
   hardware_summary?: string | null
@@ -31,7 +33,7 @@ export interface Script {
   name: string
   description?: string | null
   language: string
-  target_os_type?: string | null
+  target_os_type?: TargetOsType | null
   content: string
   created_at: string
   updated_at: string
@@ -41,7 +43,7 @@ export interface ScriptCreateInput {
   name: string
   description?: string | null
   language?: string
-  target_os_type?: string | null
+  target_os_type?: TargetOsType | null
   content: string
 }
 
@@ -49,7 +51,7 @@ export interface DeploymentProfile {
   id: number
   name: string
   description?: string | null
-  target_os_type?: string | null
+  target_os_type?: TargetOsType | null
   is_template: boolean
   created_at: string
   updated_at: string
@@ -58,7 +60,7 @@ export interface DeploymentProfile {
 export interface DeploymentProfileCreateInput {
   name: string
   description?: string | null
-  target_os_type?: string | null
+  target_os_type?: TargetOsType | null
   is_template?: boolean
 }
 

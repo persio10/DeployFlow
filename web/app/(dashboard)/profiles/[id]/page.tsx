@@ -9,6 +9,22 @@ function formatDate(value?: string | null) {
   return new Date(value).toLocaleString()
 }
 
+function formatTargetOs(value?: string | null) {
+  if (!value) return 'Any OS'
+  switch (value) {
+    case 'windows':
+      return 'Windows'
+    case 'linux':
+      return 'Linux'
+    case 'macos':
+      return 'macOS'
+    case 'proxmox':
+      return 'Proxmox'
+    default:
+      return 'Other'
+  }
+}
+
 export default function ProfileDetailPage() {
   const params = useParams()
   const paramId = params?.id
@@ -57,7 +73,7 @@ export default function ProfileDetailPage() {
         </div>
         <div className="flex items-center gap-2">
           <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-100">
-            Target OS: {profile.target_os_type ?? 'Any'}
+            Target OS: {formatTargetOs(profile.target_os_type)}
           </span>
           {profile.is_template && (
             <span className="rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-100">

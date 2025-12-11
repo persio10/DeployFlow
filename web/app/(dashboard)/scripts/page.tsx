@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { createScript, fetchScripts, Script } from '@/lib/api'
+import { createScript, fetchScripts, Script, TargetOsType } from '@/lib/api'
 
 export default function ScriptsPage() {
   const [scripts, setScripts] = useState<Script[]>([])
@@ -12,7 +12,7 @@ export default function ScriptsPage() {
   const [formName, setFormName] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formLanguage, setFormLanguage] = useState('powershell')
-  const [formTargetOs, setFormTargetOs] = useState('')
+  const [formTargetOs, setFormTargetOs] = useState<TargetOsType | ''>('')
   const [formContent, setFormContent] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -69,6 +69,31 @@ export default function ScriptsPage() {
     }
   }
 
+  const targetOsOptions: { label: string; value: TargetOsType | '' }[] = [
+    { label: 'Any OS', value: '' },
+    { label: 'Windows', value: 'windows' },
+    { label: 'Linux', value: 'linux' },
+    { label: 'macOS', value: 'macos' },
+    { label: 'Proxmox', value: 'proxmox' },
+    { label: 'Other', value: 'other' },
+  ]
+
+  const formatTargetOs = (value?: TargetOsType | null) => {
+    if (!value) return 'Any OS'
+    switch (value) {
+      case 'windows':
+        return 'Windows'
+      case 'linux':
+        return 'Linux'
+      case 'macos':
+        return 'macOS'
+      case 'proxmox':
+        return 'Proxmox'
+      default:
+        return 'Other'
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -106,7 +131,7 @@ export default function ScriptsPage() {
                 <td className="px-4 py-3 text-sm font-medium text-zinc-100">{script.name}</td>
                 <td className="px-4 py-3 text-sm text-zinc-300">{script.description ?? '—'}</td>
                 <td className="px-4 py-3 text-sm text-zinc-300">{script.language}</td>
-                <td className="px-4 py-3 text-sm text-zinc-300">{script.target_os_type ?? 'Any'}</td>
+                <td className="px-4 py-3 text-sm text-zinc-300">{formatTargetOs(script.target_os_type)}</td>
                 <td className="px-4 py-3 text-sm text-blue-300">
                   <button
                     className="rounded-md px-3 py-1 text-sm font-semibold hover:bg-blue-500/10 hover:text-blue-200"
@@ -175,14 +200,18 @@ export default function ScriptsPage() {
                 </label>
 
                 <label className="space-y-1">
-                  <span className="text-xs uppercase tracking-wide text-zinc-400">Target OS (optional)</span>
-                  <input
-                    type="text"
+                  <span className="text-xs uppercase tracking-wide text-zinc-400">Target OS</span>
+                  <select
                     value={formTargetOs}
-                    onChange={(e) => setFormTargetOs(e.target.value)}
-                    placeholder="windows / linux / macos…"
+                    onChange={(e) => setFormTargetOs(e.target.value as TargetOsType | '')}
                     className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                  />
+                  >
+                    {targetOsOptions.map((option) => (
+                      <option key={option.label} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
 
@@ -225,7 +254,7 @@ export default function ScriptsPage() {
               <div>
                 <h3 className="text-lg font-semibold">{selectedScript.name}</h3>
                 <p className="text-xs text-zinc-400">Language: {selectedScript.language}</p>
-                <p className="text-xs text-zinc-500">Target OS: {selectedScript.target_os_type ?? 'Any'}</p>
+                <p className="text-xs text-zinc-500">Target OS: {formatTargetOs(selectedScript.target_os_type)}</p>
               </div>
               <button
                 onClick={() => setSelectedScript(null)}

@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.constants import ALLOWED_OS_TYPES
 from app.db import get_db
 from app.models.script import Script
 from app.schemas.script import ScriptCreate, ScriptRead
@@ -17,6 +18,12 @@ def list_scripts(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=ScriptRead, status_code=status.HTTP_201_CREATED)
 def create_script(payload: ScriptCreate, db: Session = Depends(get_db)):
+    if payload.target_os_type is not None and payload.target_os_type not in ALLOWED_OS_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"target_os_type must be one of {', '.join(ALLOWED_OS_TYPES)}",
+        )
+
     script = Script(**payload.dict())
     db.add(script)
     db.commit()
@@ -37,6 +44,12 @@ def update_script(script_id: int, payload: ScriptCreate, db: Session = Depends(g
     script = db.query(Script).filter(Script.id == script_id).first()
     if not script:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Script not found")
+
+    if payload.target_os_type is not None and payload.target_os_type not in ALLOWED_OS_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"target_os_type must be one of {', '.join(ALLOWED_OS_TYPES)}",
+        )
     for key, value in payload.dict().items():
         setattr(script, key, value)
     db.commit()
