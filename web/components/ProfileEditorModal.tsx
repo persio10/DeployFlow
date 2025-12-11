@@ -68,7 +68,7 @@ function mapTasksFromApi(tasks?: ProfileTask[]): TaskInput[] {
     action_type: task.action_type,
     script_id: task.script_id ?? undefined,
     continue_on_error: task.continue_on_error,
-    collapsed: idx !== 0,
+    collapsed: true,
   }))
 }
 
@@ -267,9 +267,9 @@ export function ProfileEditorModal({
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4">
-      <div className="w-full max-w-4xl rounded-lg border border-zinc-800 bg-zinc-900 p-6 shadow-xl">
-        <div className="flex items-center justify-between">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4 py-6">
+      <div className="flex w-full max-w-4xl max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 shadow-xl">
+        <div className="flex items-center justify-between border-b border-zinc-800 px-6 py-4">
           <div>
             <h3 className="text-lg font-semibold">{title}</h3>
             <p className="text-xs text-zinc-400">Build a task sequence from library scripts.</p>
@@ -279,217 +279,222 @@ export function ProfileEditorModal({
           </button>
         </div>
 
-        <div className="mt-4 space-y-4 text-sm text-zinc-200">
-          {error && <div className="rounded-md bg-rose-500/10 px-3 py-2 text-rose-200">{error}</div>}
+        <div className="flex-1 overflow-y-auto px-6 py-4 text-sm text-zinc-200">
+          <div className="space-y-4">
+            {error && <div className="rounded-md bg-rose-500/10 px-3 py-2 text-rose-200">{error}</div>}
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-1">
-              <span className="text-xs uppercase tracking-wide text-zinc-400">Name</span>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-              />
-            </label>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-1">
+                <span className="text-xs uppercase tracking-wide text-zinc-400">Name</span>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                />
+              </label>
 
-            <label className="space-y-1">
-              <span className="text-xs uppercase tracking-wide text-zinc-400">Target OS</span>
-              <select
-                value={targetOsType}
-                onChange={(e) => setTargetOsType(e.target.value as TargetOsType | '')}
-                className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-              >
-                <option value="">Any</option>
-                {TARGET_OS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <label className="space-y-1">
-            <span className="text-xs uppercase tracking-wide text-zinc-400">Description</span>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[90px] w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-            />
-          </label>
-
-          {mode === 'profile' && (
-            <label className="flex items-center gap-2 text-sm text-zinc-200">
-              <input
-                type="checkbox"
-                checked={isTemplate}
-                onChange={(e) => setIsTemplate(e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-blue-500"
-              />
-              <span>Save as template</span>
-            </label>
-          )}
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold">Tasks</p>
-                <p className="text-xs text-zinc-400">
-                  Tasks run in order and will be queued as device actions when the profile is applied.
-                </p>
-              </div>
-              <button
-                onClick={addTask}
-                className="rounded-md border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200 hover:bg-zinc-800"
-              >
-                Add task
-              </button>
+              <label className="space-y-1">
+                <span className="text-xs uppercase tracking-wide text-zinc-400">Target OS</span>
+                <select
+                  value={targetOsType}
+                  onChange={(e) => setTargetOsType(e.target.value as TargetOsType | '')}
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="">Any</option>
+                  {TARGET_OS_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
-            {loadingProfile && (
-              <div className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-400">
-                Loading tasks…
-              </div>
+            <label className="space-y-1">
+              <span className="text-xs uppercase tracking-wide text-zinc-400">Description</span>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="min-h-[90px] w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+              />
+            </label>
+
+            {mode === 'profile' && (
+              <label className="flex items-center gap-2 text-sm text-zinc-200">
+                <input
+                  type="checkbox"
+                  checked={isTemplate}
+                  onChange={(e) => setIsTemplate(e.target.checked)}
+                  className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-blue-500"
+                />
+                <span>Save as template</span>
+              </label>
             )}
 
-            <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
-              {tasks.map((task, idx) => (
-                <div key={task.localId} className="rounded-lg border border-zinc-800 bg-zinc-900/70">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 px-3 py-2 text-xs text-zinc-200">
-                    <div className="flex flex-col gap-0.5 text-left">
-                      <span className="font-semibold text-zinc-100">Task {idx + 1}</span>
-                      <span className="text-[11px] text-zinc-400">
-                        {task.name || `Task ${idx + 1}`} · {task.action_type || 'powershell_inline'} · {getScriptSummary(task.script_id)}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleTaskCollapsed(task.localId)}
-                        className="rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-200 hover:bg-zinc-800"
-                      >
-                        {task.collapsed ? 'Expand' : 'Collapse'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveTask(task.localId, 'up')}
-                        className="rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-200 hover:bg-zinc-800"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => moveTask(task.localId, 'down')}
-                        className="rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-200 hover:bg-zinc-800"
-                      >
-                        ↓
-                      </button>
-                      {tasks.length > 1 && (
-                        <button
-                          onClick={() => removeTask(task.localId)}
-                          className="text-rose-300 hover:text-rose-200"
-                          type="button"
-                        >
-                          Remove
-                        </button>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Tasks</p>
+                  <p className="text-xs text-zinc-400">
+                    Tasks run in order and will be queued as device actions when the profile is applied.
+                  </p>
+                </div>
+                <button
+                  onClick={addTask}
+                  className="rounded-md border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200 hover:bg-zinc-800"
+                >
+                  Add task
+                </button>
+              </div>
+
+              {loadingProfile && (
+                <div className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-400">
+                  Loading tasks…
+                </div>
+              )}
+
+              <div className="max-h-[58vh] space-y-3 overflow-y-auto pr-1">
+                {tasks.map((task, idx) => {
+                  const displayName = task.name?.trim() || `Task ${idx + 1}`
+                  return (
+                    <div key={task.localId} className="rounded-lg border border-zinc-800 bg-zinc-900/70">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 px-3 py-2 text-xs text-zinc-200">
+                        <div className="flex min-w-[200px] flex-col gap-0.5 text-left">
+                          <span className="text-sm font-semibold text-zinc-100">{displayName}</span>
+                          <span className="text-[11px] text-zinc-400">
+                            {task.action_type || 'powershell_inline'} · {getScriptSummary(task.script_id)}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                          <button
+                            type="button"
+                            onClick={() => moveTask(task.localId, 'up')}
+                            className="rounded border border-zinc-700 px-2 py-1 text-zinc-200 hover:bg-zinc-800"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveTask(task.localId, 'down')}
+                            className="rounded border border-zinc-700 px-2 py-1 text-zinc-200 hover:bg-zinc-800"
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleTaskCollapsed(task.localId)}
+                            className="rounded border border-zinc-700 px-2 py-1 text-zinc-200 hover:bg-zinc-800"
+                          >
+                            {task.collapsed ? 'Expand' : 'Collapse'}
+                          </button>
+                          {tasks.length > 1 && (
+                            <button
+                              onClick={() => removeTask(task.localId)}
+                              className="text-rose-300 hover:text-rose-200"
+                              type="button"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {!task.collapsed && (
+                        <div className="space-y-3 p-3">
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <label className="space-y-1">
+                              <span className="text-xs uppercase tracking-wide text-zinc-400">Name</span>
+                              <input
+                                type="text"
+                                value={task.name}
+                                onChange={(e) => updateTask(task.localId, { name: e.target.value })}
+                                className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                              />
+                            </label>
+
+                            <label className="space-y-1">
+                              <span className="text-xs uppercase tracking-wide text-zinc-400">Action type</span>
+                              <select
+                                value={task.action_type}
+                                onChange={(e) => updateTask(task.localId, { action_type: e.target.value })}
+                                className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                              >
+                                <option value="powershell_inline">powershell_inline</option>
+                                <option value="bash_inline">bash_inline</option>
+                              </select>
+                            </label>
+                          </div>
+
+                          <label className="block space-y-1">
+                            <span className="text-xs uppercase tracking-wide text-zinc-400">Script</span>
+                            <select
+                              value={task.script_id ?? ''}
+                              onChange={(e) =>
+                                updateTask(task.localId, {
+                                  script_id: e.target.value ? Number(e.target.value) : undefined,
+                                })
+                              }
+                              className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                              disabled={loadingScripts}
+                            >
+                              <option value="">Select script</option>
+                              {scripts.map((script) => (
+                                <option key={script.id} value={script.id}>
+                                  {script.name} {script.target_os_type ? `(${script.target_os_type})` : ''}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-xs text-zinc-500">
+                              Scripts are pulled from the library. Create one first if you don't see it listed.
+                            </p>
+                          </label>
+
+                          <label className="block space-y-1">
+                            <span className="text-xs uppercase tracking-wide text-zinc-400">Description</span>
+                            <textarea
+                              value={task.description ?? ''}
+                              onChange={(e) => updateTask(task.localId, { description: e.target.value })}
+                              className="min-h-[70px] w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                            />
+                          </label>
+
+                          <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-300">
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={task.continue_on_error ?? true}
+                                onChange={(e) => updateTask(task.localId, { continue_on_error: e.target.checked })}
+                                className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-blue-500"
+                              />
+                              <span>Continue on error</span>
+                            </label>
+                            <span className="text-zinc-500">Order: {idx + 1}</span>
+                          </div>
+                        </div>
                       )}
                     </div>
-                  </div>
-
-                  {!task.collapsed && (
-                    <div className="space-y-3 p-3">
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <label className="space-y-1">
-                          <span className="text-xs uppercase tracking-wide text-zinc-400">Name</span>
-                          <input
-                            type="text"
-                            value={task.name}
-                            onChange={(e) => updateTask(task.localId, { name: e.target.value })}
-                            className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                          />
-                        </label>
-
-                        <label className="space-y-1">
-                          <span className="text-xs uppercase tracking-wide text-zinc-400">Action type</span>
-                          <select
-                            value={task.action_type}
-                            onChange={(e) => updateTask(task.localId, { action_type: e.target.value })}
-                            className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                          >
-                            <option value="powershell_inline">powershell_inline</option>
-                            <option value="bash_inline">bash_inline</option>
-                          </select>
-                        </label>
-                      </div>
-
-                      <label className="block space-y-1">
-                        <span className="text-xs uppercase tracking-wide text-zinc-400">Script</span>
-                        <select
-                          value={task.script_id ?? ''}
-                          onChange={(e) =>
-                            updateTask(task.localId, {
-                              script_id: e.target.value ? Number(e.target.value) : undefined,
-                            })
-                          }
-                          className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                          disabled={loadingScripts}
-                        >
-                          <option value="">Select script</option>
-                          {scripts.map((script) => (
-                            <option key={script.id} value={script.id}>
-                              {script.name} {script.target_os_type ? `(${script.target_os_type})` : ''}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-xs text-zinc-500">
-                          Scripts are pulled from the library. Create one first if you don't see it listed.
-                        </p>
-                      </label>
-
-                      <label className="block space-y-1">
-                        <span className="text-xs uppercase tracking-wide text-zinc-400">Description</span>
-                        <textarea
-                          value={task.description ?? ''}
-                          onChange={(e) => updateTask(task.localId, { description: e.target.value })}
-                          className="min-h-[70px] w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                        />
-                      </label>
-
-                      <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-300">
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={task.continue_on_error ?? true}
-                            onChange={(e) => updateTask(task.localId, { continue_on_error: e.target.checked })}
-                            className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-blue-500"
-                          />
-                          <span>Continue on error</span>
-                        </label>
-                        <span className="text-zinc-500">Order: {idx + 1}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                  )
+                })}
+              </div>
             </div>
           </div>
+        </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <button
-              onClick={onClose}
-              className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className="rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? 'Saving…' : 'Save'}
-            </button>
-          </div>
+        <div className="flex items-center justify-end gap-2 border-t border-zinc-800 px-6 py-4">
+          <button
+            onClick={onClose}
+            className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? 'Saving…' : 'Save'}
+          </button>
         </div>
       </div>
     </div>
