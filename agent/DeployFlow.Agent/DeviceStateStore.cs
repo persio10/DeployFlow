@@ -33,4 +33,12 @@ public class DeviceStateStore
         var json = JsonSerializer.Serialize(state);
         File.WriteAllText(_filePath, json);
     }
+
+    public void Clear()
+    {
+        if (File.Exists(_filePath))
+        {
+            File.Delete(_filePath);
+        }
+    }
 }
