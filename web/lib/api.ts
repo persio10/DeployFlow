@@ -25,6 +25,7 @@ export interface Action {
   type: string
   status: string
   payload?: string | null
+  script_id?: number | null
   logs?: string | null
   exit_code?: number | null
   created_at: string
@@ -103,6 +104,10 @@ export interface ProfileTaskCreateInput {
   action_type?: string
   script_id?: number | null
   continue_on_error?: boolean
+}
+
+export interface ProfileTaskUpsertInput extends ProfileTaskCreateInput {
+  id?: number
 }
 
 export interface DeploymentProfileWithTasks extends DeploymentProfile {
@@ -255,6 +260,23 @@ export async function createProfileTask(
   return handleResponse<ProfileTask>(res)
 }
 
+export async function replaceProfileTasks(
+  profileId: number,
+  tasks: ProfileTaskUpsertInput[]
+): Promise<ProfileTask[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/profiles/${profileId}/tasks/bulk`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tasks }),
+  })
+  return handleResponse<ProfileTask[]>(res)
+}
+
+export async function fetchProfileTasks(profileId: number): Promise<ProfileTask[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/profiles/${profileId}/tasks`, { cache: 'no-store' })
+  return handleResponse<ProfileTask[]>(res)
+}
+
 export async function applyProfile(profileId: number, deviceId: number): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/api/v1/profiles/${profileId}/apply`, {
     method: 'POST',
@@ -305,4 +327,16 @@ export async function deleteTemplate(templateId: number): Promise<void> {
     const message = text || res.statusText
     throw new Error(`API error (${res.status}): ${message}`)
   }
+}
+
+export async function replaceTemplateTasks(
+  templateId: number,
+  tasks: ProfileTaskUpsertInput[]
+): Promise<ProfileTask[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/templates/${templateId}/tasks/bulk`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tasks }),
+  })
+  return handleResponse<ProfileTask[]>(res)
 }

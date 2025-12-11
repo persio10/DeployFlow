@@ -18,9 +18,26 @@ from app.schemas.deployment_profile import (
     DeploymentProfileWithTasks,
     ProfileTaskCreate,
     ProfileTaskRead,
+    ProfileTaskUpdate,
+    ProfileTaskUpsert,
+    ProfileTasksBulkUpdate,
 )
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
+
+
+def _validate_script_reference(action_type: str, script_id: int, db: Session) -> Script:
+    script = db.query(Script).filter(Script.id == script_id).first()
+    if script is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Script not found")
+
+    if action_type in ("powershell_script", "powershell_inline") and script.language != "powershell":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Script language mismatch for PowerShell action",
+        )
+
+    return script
 
 
 @router.get("", response_model=List[DeploymentProfileRead])
@@ -112,18 +129,7 @@ def create_profile_task(profile_id: int, body: ProfileTaskCreate, db: Session = 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
 
     if body.script_id is not None:
-        script = db.query(Script).filter(Script.id == body.script_id).first()
-        if script is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Script not found",
-            )
-
-        if body.action_type in ("powershell_script", "powershell_inline") and script.language != "powershell":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Script language mismatch for PowerShell action",
-            )
+        _validate_script_reference(body.action_type, body.script_id, db)
 
     task = ProfileTask(
         profile_id=profile_id,
@@ -138,6 +144,90 @@ def create_profile_task(profile_id: int, body: ProfileTaskCreate, db: Session = 
     db.commit()
     db.refresh(task)
     return task
+
+
+@router.put("/{profile_id}/tasks/{task_id}", response_model=ProfileTaskRead)
+def update_profile_task(
+    profile_id: int, task_id: int, body: ProfileTaskUpdate, db: Session = Depends(get_db)
+):
+    profile = db.query(DeploymentProfile).filter(DeploymentProfile.id == profile_id).first()
+    if profile is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+
+    task = (
+        db.query(ProfileTask)
+        .filter(ProfileTask.id == task_id, ProfileTask.profile_id == profile_id)
+        .first()
+    )
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    update_data = body.model_dump(exclude_unset=True)
+
+    if "script_id" in update_data and update_data["script_id"] is not None:
+        _validate_script_reference(update_data.get("action_type", task.action_type), update_data["script_id"], db)
+
+    for key, value in update_data.items():
+        setattr(task, key, value)
+
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+@router.delete("/{profile_id}/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_profile_task(profile_id: int, task_id: int, db: Session = Depends(get_db)):
+    profile = db.query(DeploymentProfile).filter(DeploymentProfile.id == profile_id).first()
+    if profile is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+
+    task = (
+        db.query(ProfileTask)
+        .filter(ProfileTask.id == task_id, ProfileTask.profile_id == profile_id)
+        .first()
+    )
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    db.delete(task)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put("/{profile_id}/tasks/bulk", response_model=List[ProfileTaskRead])
+def replace_profile_tasks(
+    profile_id: int, body: ProfileTasksBulkUpdate, db: Session = Depends(get_db)
+):
+    profile = db.query(DeploymentProfile).filter(DeploymentProfile.id == profile_id).first()
+    if profile is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+
+    db.query(ProfileTask).filter(ProfileTask.profile_id == profile_id).delete()
+    created_tasks: list[ProfileTask] = []
+
+    for idx, task in enumerate(body.tasks):
+        action_type = task.action_type or "powershell_inline"
+        if task.script_id is not None:
+            _validate_script_reference(action_type, task.script_id, db)
+
+        created = ProfileTask(
+            profile_id=profile_id,
+            name=(task.name or f"Task {idx + 1}"),
+            description=task.description,
+            order_index=task.order_index if task.order_index is not None else idx,
+            action_type=action_type,
+            script_id=task.script_id,
+            continue_on_error=True if task.continue_on_error is None else task.continue_on_error,
+        )
+        db.add(created)
+        created_tasks.append(created)
+
+    db.commit()
+    for task in created_tasks:
+        db.refresh(task)
+
+    return created_tasks
 
 
 class ApplyProfileRequest(BaseModel):
@@ -175,6 +265,7 @@ def apply_profile_to_devices(profile_id: int, body: ApplyProfileRequest, db: Ses
 
         for task in tasks:
             payload: str | None = None
+            script_id: int | None = task.script_id
 
             if task.script_id is not None:
                 script = db.query(Script).filter(Script.id == task.script_id).first()
@@ -189,10 +280,15 @@ def apply_profile_to_devices(profile_id: int, body: ApplyProfileRequest, db: Ses
 
                 payload = script.content
 
+            if task.action_type in {"powershell_inline", "bash_inline"} and payload is None:
+                # Skip tasks that require a script payload when none is available
+                continue
+
             action = Action(
                 device_id=device.id,
                 type=task.action_type,
                 payload=payload,
+                script_id=script_id,
                 status=ACTION_STATUS_PENDING,
             )
             db.add(action)

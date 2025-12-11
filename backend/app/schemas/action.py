@@ -16,6 +16,7 @@ class ActionRead(BaseModel):
     type: str
     status: str
     payload: Optional[str] = None
+    script_id: Optional[int] = None
     logs: Optional[str] = None
     created_at: datetime
     updated_at: datetime

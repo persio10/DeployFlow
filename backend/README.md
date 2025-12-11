@@ -15,7 +15,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## Core Concepts & Models
 - **Device**: hostname, status, `os_type`, `os_version`, `hardware_summary`, `profile_id`, `last_check_in`, `is_deleted`, timestamps.
-- **Action**: pending/running/succeeded/failed + payload/logs/timestamps; used for scripts, uninstall, etc.
+- **Action**: pending/running/succeeded/failed + payload/logs/timestamps; optional `script_id`; used for scripts, uninstall, etc.
 - **Script**: reusable automation with `name`, `description`, `language` (`powershell`|`bash`), `content`, optional `target_os_type`.
 - **DeploymentProfile**: ordered task sequences; `is_template` differentiates templates vs. deployable profiles; optional `target_os_type`.
 - **ProfileTask**: `name`, `description`, `order_index`, `action_type` (e.g., `powershell_inline`), optional `script_id`, `continue_on_error`.
@@ -42,8 +42,8 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - Device actions and profile tasks can reference `script_id`; backend injects script content into action payloads.
 
 ## Deployment Profiles & Templates
-- Profiles (`/api/v1/profiles`) — CRUD plus tasks (`/tasks`) and apply (`/apply`) to create pending actions for one or more devices.
-- Templates (`/api/v1/templates`) — profiles with `is_template=true`; can be instantiated via `POST /api/v1/templates/{id}/instantiate` into editable profiles.
+- Profiles (`/api/v1/profiles`) — CRUD plus tasks (`/tasks`) and apply (`/apply`) to create pending actions for one or more devices. Task CRUD supports list/create/update/delete and bulk replace via `/tasks/bulk`.
+- Templates (`/api/v1/templates`) — profiles with `is_template=true`; can be instantiated via `POST /api/v1/templates/{id}/instantiate` into editable profiles. Task CRUD matches profiles, including `/tasks/bulk` for replacement.
 - Update/delete supported for both profiles and templates; tasks cascade on delete.
 
 ## OS Awareness & Validation

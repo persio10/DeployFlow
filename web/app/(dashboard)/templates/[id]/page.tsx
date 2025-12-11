@@ -256,7 +256,7 @@ export default function TemplateDetailPage() {
         initialProfile={template}
         onClose={() => setEditOpen(false)}
         onSaved={(updated) => {
-          setTemplate((prev) => (prev ? { ...prev, ...updated } : prev))
+          setTemplate(updated)
           setEditOpen(false)
         }}
       />

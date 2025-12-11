@@ -55,6 +55,7 @@ def create_action_for_device(device_id: int, body: ActionCreate, db: Session = D
         device_id=device.id,
         type=body.type,
         payload=payload,
+        script_id=body.script_id,
         status=ACTION_STATUS_PENDING,
     )
     db.add(action)

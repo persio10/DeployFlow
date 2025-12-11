@@ -162,7 +162,7 @@ export default function ProfileDetailPage() {
         initialProfile={profile}
         onClose={() => setEditOpen(false)}
         onSaved={(updated) => {
-          setProfile((prev) => (prev ? { ...prev, ...updated } : prev))
+          setProfile(updated)
           setEditOpen(false)
         }}
       />

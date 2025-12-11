@@ -3,15 +3,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   createProfile,
-  createProfileTask,
+  fetchProfile,
   fetchScripts,
+  fetchTemplate,
+  replaceProfileTasks,
+  replaceTemplateTasks,
   updateProfile,
   updateTemplate,
   DeploymentProfileCreateInput,
   DeploymentProfile,
   DeploymentProfileWithTasks,
   DeploymentProfileUpdateInput,
-  ProfileTaskCreateInput,
+  ProfileTask,
+  ProfileTaskUpsertInput,
   Script,
   TargetOsType,
 } from '@/lib/api'
@@ -27,10 +31,11 @@ interface ProfileEditorModalProps {
   initialProfile?: DeploymentProfile | DeploymentProfileWithTasks | null
   onClose: () => void
   onCreated?: (profileId: number) => void
-  onSaved?: (profile: DeploymentProfile) => void
+  onSaved?: (profile: DeploymentProfileWithTasks) => void
 }
 
-interface TaskInput extends ProfileTaskCreateInput {
+interface TaskInput extends Omit<ProfileTaskUpsertInput, 'order_index'> {
+  order_index?: number
   localId: string
 }
 
@@ -44,6 +49,25 @@ function defaultTask(order: number): TaskInput {
     script_id: undefined,
     continue_on_error: true,
   }
+}
+
+function mapTasksFromApi(tasks?: ProfileTask[]): TaskInput[] {
+  if (!tasks) return [defaultTask(0)]
+  const sorted = [...tasks].sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+  return sorted.map((task, idx) => ({
+    localId: crypto.randomUUID(),
+    id: task.id,
+    name: task.name,
+    description: task.description ?? '',
+    order_index: task.order_index ?? idx,
+    action_type: task.action_type,
+    script_id: task.script_id ?? undefined,
+    continue_on_error: task.continue_on_error,
+  }))
+}
+
+function normalizeOrder(tasks: TaskInput[]): TaskInput[] {
+  return tasks.map((task, idx) => ({ ...task, order_index: idx }))
 }
 
 export function ProfileEditorModal({
@@ -63,6 +87,7 @@ export function ProfileEditorModal({
 
   const [scripts, setScripts] = useState<Script[]>([])
   const [loadingScripts, setLoadingScripts] = useState(false)
+  const [loadingProfile, setLoadingProfile] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -76,7 +101,9 @@ export function ProfileEditorModal({
   useEffect(() => {
     if (!open) return
 
-    const loadScripts = async () => {
+    const load = async () => {
+      setError(null)
+      setSubmitting(false)
       setLoadingScripts(true)
       try {
         const data = await fetchScripts()
@@ -87,40 +114,75 @@ export function ProfileEditorModal({
       } finally {
         setLoadingScripts(false)
       }
+
+      if (variant === 'edit' && initialProfile) {
+        setLoadingProfile(true)
+        try {
+          const loader =
+            mode === 'template' || initialProfile.is_template
+              ? () => fetchTemplate(initialProfile.id)
+              : () => fetchProfile(initialProfile.id)
+          const fullProfile = await loader()
+          setName(fullProfile.name)
+          setDescription(fullProfile.description ?? '')
+          setTargetOsType(fullProfile.target_os_type ?? '')
+          setIsTemplate(fullProfile.is_template)
+          setTasks(normalizeOrder(mapTasksFromApi(fullProfile.tasks)))
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to load profile'
+          setError(message)
+        } finally {
+          setLoadingProfile(false)
+        }
+      } else {
+        setName('')
+        setDescription('')
+        setTargetOsType('')
+        setIsTemplate(mode === 'template')
+        setTasks([defaultTask(0)])
+      }
     }
 
-    setError(null)
-
-    if (initialProfile) {
-      setName(initialProfile.name)
-      setDescription(initialProfile.description ?? '')
-      setTargetOsType(initialProfile.target_os_type ?? '')
-      setIsTemplate(initialProfile.is_template)
-    } else {
-      // reset form when opening
-      setName('')
-      setDescription('')
-      setTargetOsType('')
-      setIsTemplate(mode === 'template')
-      setTasks([defaultTask(0)])
-    }
-
-    if (variant === 'create') {
-      setTasks([defaultTask(0)])
-      loadScripts()
-    }
+    load()
   }, [initialProfile, mode, open, variant])
 
   const updateTask = (localId: string, updates: Partial<TaskInput>) => {
-    setTasks((prev) => prev.map((task) => (task.localId === localId ? { ...task, ...updates } : task)))
+    setTasks((prev) => normalizeOrder(prev.map((task) => (task.localId === localId ? { ...task, ...updates } : task))))
   }
 
   const addTask = () => {
-    setTasks((prev) => [...prev, defaultTask(prev.length)])
+    setTasks((prev) => normalizeOrder([...prev, defaultTask(prev.length)]))
   }
 
   const removeTask = (localId: string) => {
-    setTasks((prev) => (prev.length === 1 ? prev : prev.filter((task) => task.localId !== localId)))
+    setTasks((prev) => {
+      if (prev.length === 1) return prev
+      return normalizeOrder(prev.filter((task) => task.localId !== localId))
+    })
+  }
+
+  const moveTask = (localId: string, direction: 'up' | 'down') => {
+    setTasks((prev) => {
+      const idx = prev.findIndex((t) => t.localId === localId)
+      if (idx === -1) return prev
+      const target = direction === 'up' ? idx - 1 : idx + 1
+      if (target < 0 || target >= prev.length) return prev
+      const next = [...prev]
+      ;[next[idx], next[target]] = [next[target], next[idx]]
+      return normalizeOrder(next)
+    })
+  }
+
+  const preparedTasks = () => {
+    const sorted = normalizeOrder(tasks)
+    return sorted.map((task, idx) => ({
+      name: task.name?.trim() || `Task ${idx + 1}`,
+      description: task.description?.trim() || undefined,
+      order_index: idx,
+      action_type: task.action_type || 'powershell_inline',
+      script_id: task.script_id ?? undefined,
+      continue_on_error: task.continue_on_error ?? true,
+    }))
   }
 
   const handleSubmit = async () => {
@@ -141,30 +203,27 @@ export function ProfileEditorModal({
       }
 
       if (variant === 'edit' && initialProfile) {
-        const updatePayload: DeploymentProfileUpdateInput = basePayload
-        const updater = mode === 'template' || initialProfile.is_template ? updateTemplate : updateProfile
-        const updated = await updater(initialProfile.id, updatePayload)
-        onSaved?.(updated)
+        const updater =
+          mode === 'template' || initialProfile.is_template ? updateTemplate : updateProfile
+        const tasksSaver =
+          mode === 'template' || initialProfile.is_template
+            ? replaceTemplateTasks
+            : replaceProfileTasks
+
+        const updatedProfile = await updater(initialProfile.id, basePayload)
+        const savedTasks = await tasksSaver(initialProfile.id, preparedTasks())
+        const combined: DeploymentProfileWithTasks = { ...updatedProfile, tasks: savedTasks }
+        setTasks(normalizeOrder(mapTasksFromApi(savedTasks)))
+        onSaved?.(combined)
         onClose()
         return
       }
 
       const profile = await createProfile(basePayload as DeploymentProfileCreateInput)
-
-      // Create tasks sequentially to preserve ordering
-      for (const [index, task] of tasks.entries()) {
-        const payload: ProfileTaskCreateInput = {
-          name: task.name?.trim() || `Task ${index + 1}`,
-          description: task.description?.trim() || undefined,
-          order_index: task.order_index ?? index,
-          action_type: task.action_type || 'powershell_inline',
-          script_id: task.script_id ?? undefined,
-          continue_on_error: task.continue_on_error ?? true,
-        }
-        await createProfileTask(profile.id, payload)
-      }
-
+      const savedTasks = await replaceProfileTasks(profile.id, preparedTasks())
+      const combined: DeploymentProfileWithTasks = { ...profile, tasks: savedTasks }
       onCreated?.(profile.id)
+      onSaved?.(combined)
       onClose()
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save profile'
@@ -241,26 +300,51 @@ export function ProfileEditorModal({
             </label>
           )}
 
-          {variant === 'create' ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold">Tasks</p>
-                  <p className="text-xs text-zinc-400">Configure ordered tasks that will be queued as device actions.</p>
-                </div>
-                <button
-                  onClick={addTask}
-                  className="rounded-md border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200 hover:bg-zinc-800"
-                >
-                  Add task
-                </button>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold">Tasks</p>
+                <p className="text-xs text-zinc-400">
+                  Tasks run in order and will be queued as device actions when the profile is applied.
+                </p>
               </div>
+              <button
+                onClick={addTask}
+                className="rounded-md border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200 hover:bg-zinc-800"
+              >
+                Add task
+              </button>
+            </div>
 
-              <div className="space-y-3">
-                {tasks.map((task, idx) => (
-                  <div key={task.localId} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
-                    <div className="flex items-center justify-between text-xs text-zinc-400">
-                      <span>Task {idx + 1}</span>
+            {loadingProfile && (
+              <div className="rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-400">
+                Loading tasks…
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {tasks.map((task, idx) => (
+                <div key={task.localId} className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                  <div className="flex items-center justify-between text-xs text-zinc-400">
+                    <span>
+                      Task {idx + 1}
+                      {task.action_type ? ` · ${task.action_type}` : ''}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => moveTask(task.localId, 'up')}
+                        className="rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-200 hover:bg-zinc-800"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveTask(task.localId, 'down')}
+                        className="rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-200 hover:bg-zinc-800"
+                      >
+                        ↓
+                      </button>
                       {tasks.length > 1 && (
                         <button
                           onClick={() => removeTask(task.localId)}
@@ -271,93 +355,81 @@ export function ProfileEditorModal({
                         </button>
                       )}
                     </div>
+                  </div>
 
-                    <div className="mt-3 grid gap-3 md:grid-cols-2">
-                      <label className="space-y-1">
-                        <span className="text-xs uppercase tracking-wide text-zinc-400">Name</span>
-                        <input
-                          type="text"
-                          value={task.name}
-                          onChange={(e) => updateTask(task.localId, { name: e.target.value })}
-                          className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                        />
-                      </label>
-
-                      <label className="space-y-1">
-                        <span className="text-xs uppercase tracking-wide text-zinc-400">Action type</span>
-                        <select
-                          value={task.action_type}
-                          onChange={(e) => updateTask(task.localId, { action_type: e.target.value })}
-                          className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                        >
-                          <option value="powershell_inline">powershell_inline</option>
-                          <option value="bash_inline">bash_inline</option>
-                        </select>
-                      </label>
-                    </div>
-
-                    <label className="mt-3 block space-y-1">
-                      <span className="text-xs uppercase tracking-wide text-zinc-400">Script</span>
-                      <select
-                        value={task.script_id ?? ''}
-                        onChange={(e) =>
-                          updateTask(task.localId, {
-                            script_id: e.target.value ? Number(e.target.value) : undefined,
-                          })
-                        }
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <label className="space-y-1">
+                      <span className="text-xs uppercase tracking-wide text-zinc-400">Name</span>
+                      <input
+                        type="text"
+                        value={task.name}
+                        onChange={(e) => updateTask(task.localId, { name: e.target.value })}
                         className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                        disabled={loadingScripts}
-                      >
-                        <option value="">Select script</option>
-                        {scripts.map((script) => (
-                          <option key={script.id} value={script.id}>
-                            {script.name} {script.target_os_type ? `(${script.target_os_type})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-xs text-zinc-500">
-                        Scripts are pulled from the library. Create one first if you don't see it listed.
-                      </p>
-                    </label>
-
-                    <label className="mt-3 block space-y-1">
-                      <span className="text-xs uppercase tracking-wide text-zinc-400">Description</span>
-                      <textarea
-                        value={task.description ?? ''}
-                        onChange={(e) => updateTask(task.localId, { description: e.target.value })}
-                        className="min-h-[70px] w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
                       />
                     </label>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-zinc-300">
-                      <label className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={task.continue_on_error ?? true}
-                          onChange={(e) => updateTask(task.localId, { continue_on_error: e.target.checked })}
-                          className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-blue-500"
-                        />
-                        <span>Continue on error</span>
-                      </label>
-                      <label className="flex items-center gap-2">
-                        <span className="text-zinc-400">Order</span>
-                        <input
-                          type="number"
-                          value={task.order_index ?? idx}
-                          onChange={(e) => updateTask(task.localId, { order_index: Number(e.target.value) })}
-                          className="w-20 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-white focus:border-blue-500 focus:outline-none"
-                        />
-                      </label>
-                    </div>
+                    <label className="space-y-1">
+                      <span className="text-xs uppercase tracking-wide text-zinc-400">Action type</span>
+                      <select
+                        value={task.action_type}
+                        onChange={(e) => updateTask(task.localId, { action_type: e.target.value })}
+                        className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      >
+                        <option value="powershell_inline">powershell_inline</option>
+                        <option value="bash_inline">bash_inline</option>
+                      </select>
+                    </label>
                   </div>
-                ))}
-              </div>
+
+                  <label className="mt-3 block space-y-1">
+                    <span className="text-xs uppercase tracking-wide text-zinc-400">Script</span>
+                    <select
+                      value={task.script_id ?? ''}
+                      onChange={(e) =>
+                        updateTask(task.localId, {
+                          script_id: e.target.value ? Number(e.target.value) : undefined,
+                        })
+                      }
+                      className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                      disabled={loadingScripts}
+                    >
+                      <option value="">Select script</option>
+                      {scripts.map((script) => (
+                        <option key={script.id} value={script.id}>
+                          {script.name} {script.target_os_type ? `(${script.target_os_type})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-zinc-500">
+                      Scripts are pulled from the library. Create one first if you don't see it listed.
+                    </p>
+                  </label>
+
+                  <label className="mt-3 block space-y-1">
+                    <span className="text-xs uppercase tracking-wide text-zinc-400">Description</span>
+                    <textarea
+                      value={task.description ?? ''}
+                      onChange={(e) => updateTask(task.localId, { description: e.target.value })}
+                      className="min-h-[70px] w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                    />
+                  </label>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-zinc-300">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={task.continue_on_error ?? true}
+                        onChange={(e) => updateTask(task.localId, { continue_on_error: e.target.checked })}
+                        className="h-4 w-4 rounded border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-blue-500"
+                      />
+                      <span>Continue on error</span>
+                    </label>
+                    <span className="text-zinc-500">Order: {idx + 1}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : (
-            <div className="rounded-md border border-zinc-800 bg-zinc-900/40 p-3 text-xs text-zinc-400">
-              Task editing is not available here yet. Update name, description, and target OS, or recreate the profile to change tasks.
-            </div>
-          )}
+          </div>
 
           <div className="flex items-center justify-end gap-2 pt-2">
             <button

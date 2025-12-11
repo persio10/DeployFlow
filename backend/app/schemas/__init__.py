@@ -6,6 +6,9 @@ from app.schemas.deployment_profile import (  # noqa: F401
     DeploymentProfileWithTasks,
     ProfileTaskCreate,
     ProfileTaskRead,
+    ProfileTaskUpdate,
+    ProfileTaskUpsert,
+    ProfileTasksBulkUpdate,
 )
 from app.schemas.device import DeviceCreate, DeviceRead, DeviceUpdate  # noqa: F401
 from app.schemas.enrollment_token import EnrollmentTokenCreate, EnrollmentTokenRead  # noqa: F401

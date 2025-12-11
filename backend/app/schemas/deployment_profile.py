@@ -26,6 +26,15 @@ class ProfileTaskCreate(ProfileTaskBase):
     pass
 
 
+class ProfileTaskUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    order_index: Optional[int] = None
+    action_type: Optional[str] = None
+    script_id: Optional[int] = None
+    continue_on_error: Optional[bool] = None
+
+
 class ProfileTaskRead(ProfileTaskBase):
     id: int
     profile_id: int
@@ -63,3 +72,11 @@ class DeploymentProfileRead(DeploymentProfileBase):
 
 class DeploymentProfileWithTasks(DeploymentProfileRead):
     tasks: List[ProfileTaskRead] = []
+
+
+class ProfileTaskUpsert(ProfileTaskBase):
+    id: Optional[int] = None
+
+
+class ProfileTasksBulkUpdate(BaseModel):
+    tasks: List[ProfileTaskUpsert]
