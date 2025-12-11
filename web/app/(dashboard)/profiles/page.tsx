@@ -5,22 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DeploymentProfile, fetchProfiles } from '@/lib/api'
 import { ProfileEditorModal } from '@/components/ProfileEditorModal'
-
-function formatTargetOs(value?: string | null) {
-  if (!value) return 'Any OS'
-  switch (value) {
-    case 'windows':
-      return 'Windows'
-    case 'linux':
-      return 'Linux'
-    case 'macos':
-      return 'macOS'
-    case 'proxmox':
-      return 'Proxmox'
-    default:
-      return 'Other'
-  }
-}
+import { formatTargetOs } from '@/lib/osTypes'
 
 function TargetBadge({ value }: { value?: string | null }) {
   return (

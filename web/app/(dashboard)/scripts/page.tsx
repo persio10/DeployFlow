@@ -2,23 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import ScriptModal from '@/components/ScriptModal'
-import { deleteScript, fetchScripts, Script, TargetOsType } from '@/lib/api'
-
-function formatTargetOs(value?: TargetOsType | null) {
-  if (!value) return 'Any OS'
-  switch (value) {
-    case 'windows':
-      return 'Windows'
-    case 'linux':
-      return 'Linux'
-    case 'macos':
-      return 'macOS'
-    case 'proxmox':
-      return 'Proxmox'
-    default:
-      return 'Other'
-  }
-}
+import { deleteScript, fetchScripts, Script } from '@/lib/api'
+import { formatTargetOs, TargetOsType } from '@/lib/osTypes'
 
 function TargetOsBadge({ value }: { value?: TargetOsType | null }) {
   return (

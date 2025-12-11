@@ -3,27 +3,13 @@
 import { useMemo, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { DeploymentProfileWithTasks, fetchProfile } from '@/lib/api'
+import { formatTargetOs } from '@/lib/osTypes'
 
 function formatDate(value?: string | null) {
   if (!value) return '—'
   return new Date(value).toLocaleString()
 }
 
-function formatTargetOs(value?: string | null) {
-  if (!value) return 'Any OS'
-  switch (value) {
-    case 'windows':
-      return 'Windows'
-    case 'linux':
-      return 'Linux'
-    case 'macos':
-      return 'macOS'
-    case 'proxmox':
-      return 'Proxmox'
-    default:
-      return 'Other'
-  }
-}
 
 export default function ProfileDetailPage() {
   const params = useParams()

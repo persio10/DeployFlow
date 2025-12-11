@@ -1,8 +1,12 @@
 ALLOWED_OS_TYPES = (
     "windows",
-    "linux",
-    "macos",
+    "windows_server",
+    "ubuntu",
+    "debian",
     "proxmox",
+    "rhel",
+    "centos",
+    "macos",
     "other",
 )
 
