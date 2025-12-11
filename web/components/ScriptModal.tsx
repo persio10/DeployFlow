@@ -6,19 +6,10 @@ import {
   ScriptCreateInput,
   ScriptLanguage,
   ScriptUpdateInput,
-  TargetOsType,
   createScript,
   updateScript,
 } from '@/lib/api'
-
-const targetOsOptions: { label: string; value: TargetOsType | '' }[] = [
-  { label: 'Any OS', value: '' },
-  { label: 'Windows', value: 'windows' },
-  { label: 'Linux', value: 'linux' },
-  { label: 'macOS', value: 'macos' },
-  { label: 'Proxmox', value: 'proxmox' },
-  { label: 'Other', value: 'other' },
-]
+import { TARGET_OS_OPTIONS, TargetOsType } from '@/lib/osTypes'
 
 const languageOptions: { label: string; value: ScriptLanguage }[] = [
   { label: 'powershell', value: 'powershell' },
@@ -151,8 +142,9 @@ export default function ScriptModal({ open, mode, initialScript, onClose, onSave
                 onChange={(e) => setTargetOs(e.target.value as TargetOsType | '')}
                 className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
               >
-                {targetOsOptions.map((option) => (
-                  <option key={option.label} value={option.value}>
+                <option value="">Any OS</option>
+                {TARGET_OS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}

@@ -1,6 +1,8 @@
+import type { TargetOsType } from './osTypes'
+
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000'
 
-export type TargetOsType = 'windows' | 'linux' | 'macos' | 'proxmox' | 'other'
+export type { TargetOsType } from './osTypes'
 export type ScriptLanguage = 'powershell' | 'bash'
 
 export interface Device {

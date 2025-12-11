@@ -10,14 +10,7 @@ import {
   Script,
   TargetOsType,
 } from '@/lib/api'
-
-const osOptions: { value: 'windows' | 'linux' | 'macos' | 'proxmox' | 'other'; label: string }[] = [
-  { value: 'windows', label: 'Windows' },
-  { value: 'linux', label: 'Linux' },
-  { value: 'macos', label: 'macOS' },
-  { value: 'proxmox', label: 'Proxmox' },
-  { value: 'other', label: 'Other' },
-]
+import { TARGET_OS_OPTIONS } from '@/lib/osTypes'
 
 export type ProfileEditorMode = 'profile' | 'template'
 
@@ -176,7 +169,7 @@ export function ProfileEditorModal({ open, onClose, onCreated, mode = 'profile' 
                 className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
               >
                 <option value="">Any</option>
-                {osOptions.map((option) => (
+                {TARGET_OS_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>

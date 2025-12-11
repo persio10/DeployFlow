@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { DeploymentProfileWithTasks, fetchTemplate, instantiateTemplate } from '@/lib/api'
+import { formatTargetOs } from '@/lib/osTypes'
 
 function formatDate(value?: string | null) {
   if (!value) return '—'
@@ -12,7 +13,7 @@ function formatDate(value?: string | null) {
 function TargetBadge({ value }: { value?: string | null }) {
   return (
     <span className="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs font-semibold text-zinc-200">
-      {value ?? 'Any OS'}
+      {formatTargetOs(value)}
     </span>
   )
 }
