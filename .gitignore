@@ -1,0 +1,52 @@
+########################
+# Root / OS / Editor
+########################
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+########################
+# Python (backend/)
+########################
+venv/
+.venv/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# SQLite / local DBs
+backend/*.db
+backend/*.sqlite
+backend/*.sqlite3
+
+########################
+# Node / Next.js (web/)
+########################
+web/node_modules/
+web/.next/
+web/.turbo/
+web/.swc/
+web/npm-debug.log*
+web/yarn-error.log*
+web/package-lock.json.*
+
+########################
+# .NET / C# Agent (agent/DeployFlow.Agent)
+########################
+agent/**/bin/
+agent/**/obj/
+agent/.vs/
+*.user
+*.suo
+
+########################
+# Misc build artefacts
+########################
+dist/
+build/
+
+# Agent runtime state
+agent/DeployFlow.Agent/device_state.json
