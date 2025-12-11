@@ -277,6 +277,11 @@ export async function fetchProfileTasks(profileId: number): Promise<ProfileTask[
   return handleResponse<ProfileTask[]>(res)
 }
 
+export async function fetchTemplateTasks(templateId: number): Promise<ProfileTask[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/templates/${templateId}/tasks`, { cache: 'no-store' })
+  return handleResponse<ProfileTask[]>(res)
+}
+
 export async function applyProfile(profileId: number, deviceId: number): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/api/v1/profiles/${profileId}/apply`, {
     method: 'POST',

@@ -43,6 +43,17 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## Deployment Profiles & Templates
 - Profiles (`/api/v1/profiles`) — CRUD plus tasks (`/tasks`) and apply (`/apply`) to create pending actions for one or more devices. Task CRUD supports list/create/update/delete and bulk replace via `/tasks/bulk`.
+  - Task endpoints: `GET/POST /{profile_id}/tasks`, `PUT /{profile_id}/tasks/{task_id}`, `DELETE /{profile_id}/tasks/{task_id}`, `PUT /{profile_id}/tasks/bulk` (replace all tasks atomically).
+  - Bulk payload example:
+    ```json
+    {
+      "tasks": [
+        { "name": "Prep", "order_index": 0, "action_type": "powershell_inline", "script_id": 1, "continue_on_error": true },
+        { "name": "Post", "order_index": 1, "action_type": "powershell_inline", "script_id": 2 }
+      ]
+    }
+    ```
+  - Apply (`POST /{profile_id}/apply`) hydrates `payload` from referenced `Script.content` before creating actions so the agent always receives inline bodies.
 - Templates (`/api/v1/templates`) — profiles with `is_template=true`; can be instantiated via `POST /api/v1/templates/{id}/instantiate` into editable profiles. Task CRUD matches profiles, including `/tasks/bulk` for replacement.
 - Update/delete supported for both profiles and templates; tasks cascade on delete.
 

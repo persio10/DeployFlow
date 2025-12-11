@@ -25,3 +25,4 @@ npm run dev
 - Target OS selections use shared dropdown options (`windows`, `windows_server`, `ubuntu`, `debian`, `proxmox`, `rhel`, `centos`, `macos`, `other`).
 - Device deletion confirms before calling backend and shows a toast after success or failure.
 - Actions history includes colored status indicators and logs modal for inspecting stdout/stderr and exit codes returned by the agent.
+- Profile/Template editor loads existing tasks, allows add/remove/reorder, and saves via bulk task replace endpoints (`PUT /api/v1/profiles/{id}/tasks/bulk` or templates equivalent) so edits persist without rebuilding sequences.

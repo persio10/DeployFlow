@@ -59,6 +59,13 @@ def get_template(template_id: int, db: Session = Depends(get_db)):
     )
     if template is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+    tasks = (
+        db.query(ProfileTask)
+        .filter(ProfileTask.profile_id == template_id)
+        .order_by(ProfileTask.order_index.asc(), ProfileTask.id.asc())
+        .all()
+    )
+    template.tasks = tasks
     return template
 
 
@@ -82,6 +89,48 @@ def list_template_tasks(template_id: int, db: Session = Depends(get_db)):
         .all()
     )
     return tasks
+
+
+@router.put("/{template_id}/tasks/bulk", response_model=List[ProfileTaskRead])
+def replace_template_tasks(
+    template_id: int, body: ProfileTasksBulkUpdate, db: Session = Depends(get_db)
+):
+    template = (
+        db.query(DeploymentProfile)
+        .filter(
+            DeploymentProfile.id == template_id,
+            DeploymentProfile.is_template.is_(True),
+        )
+        .first()
+    )
+    if template is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+
+    db.query(ProfileTask).filter(ProfileTask.profile_id == template_id).delete()
+    created_tasks: list[ProfileTask] = []
+
+    for idx, task in enumerate(body.tasks):
+        action_type = task.action_type or "powershell_inline"
+        if task.script_id is not None:
+            _validate_script_reference(action_type, task.script_id, db)
+
+        created = ProfileTask(
+            profile_id=template_id,
+            name=(task.name or f"Task {idx + 1}"),
+            description=task.description,
+            order_index=task.order_index if task.order_index is not None else idx,
+            action_type=action_type,
+            script_id=task.script_id,
+            continue_on_error=True if task.continue_on_error is None else task.continue_on_error,
+        )
+        db.add(created)
+        created_tasks.append(created)
+
+    db.commit()
+    for task in created_tasks:
+        db.refresh(task)
+
+    return created_tasks
 
 
 @router.post("/{template_id}/tasks", response_model=ProfileTaskRead, status_code=status.HTTP_201_CREATED)
@@ -115,6 +164,68 @@ def create_template_task(
     db.commit()
     db.refresh(task)
     return task
+
+
+@router.put("/{template_id}/tasks/{task_id}", response_model=ProfileTaskRead)
+def update_template_task(
+    template_id: int, task_id: int, body: ProfileTaskUpdate, db: Session = Depends(get_db)
+):
+    template = (
+        db.query(DeploymentProfile)
+        .filter(
+            DeploymentProfile.id == template_id,
+            DeploymentProfile.is_template.is_(True),
+        )
+        .first()
+    )
+    if template is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+
+    task = (
+        db.query(ProfileTask)
+        .filter(ProfileTask.id == task_id, ProfileTask.profile_id == template_id)
+        .first()
+    )
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    update_data = body.model_dump(exclude_unset=True)
+    if "script_id" in update_data and update_data["script_id"] is not None:
+        _validate_script_reference(update_data.get("action_type", task.action_type), update_data["script_id"], db)
+
+    for key, value in update_data.items():
+        setattr(task, key, value)
+
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+@router.delete("/{template_id}/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_template_task(template_id: int, task_id: int, db: Session = Depends(get_db)):
+    template = (
+        db.query(DeploymentProfile)
+        .filter(
+            DeploymentProfile.id == template_id,
+            DeploymentProfile.is_template.is_(True),
+        )
+        .first()
+    )
+    if template is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+
+    task = (
+        db.query(ProfileTask)
+        .filter(ProfileTask.id == task_id, ProfileTask.profile_id == template_id)
+        .first()
+    )
+    if task is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    db.delete(task)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 class InstantiateTemplateRequest(BaseModel):
@@ -182,108 +293,6 @@ def instantiate_template(
     return new_profile
 
 
-@router.put("/{template_id}/tasks/{task_id}", response_model=ProfileTaskRead)
-def update_template_task(
-    template_id: int, task_id: int, body: ProfileTaskUpdate, db: Session = Depends(get_db)
-):
-    template = (
-        db.query(DeploymentProfile)
-        .filter(
-            DeploymentProfile.id == template_id,
-            DeploymentProfile.is_template.is_(True),
-        )
-        .first()
-    )
-    if template is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
-
-    task = (
-        db.query(ProfileTask)
-        .filter(ProfileTask.id == task_id, ProfileTask.profile_id == template_id)
-        .first()
-    )
-    if task is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-
-    update_data = body.model_dump(exclude_unset=True)
-    if "script_id" in update_data and update_data["script_id"] is not None:
-        _validate_script_reference(update_data.get("action_type", task.action_type), update_data["script_id"], db)
-
-    for key, value in update_data.items():
-        setattr(task, key, value)
-
-    db.add(task)
-    db.commit()
-    db.refresh(task)
-    return task
-
-
-@router.delete("/{template_id}/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_template_task(template_id: int, task_id: int, db: Session = Depends(get_db)):
-    template = (
-        db.query(DeploymentProfile)
-        .filter(
-            DeploymentProfile.id == template_id,
-            DeploymentProfile.is_template.is_(True),
-        )
-        .first()
-    )
-    if template is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
-
-    task = (
-        db.query(ProfileTask)
-        .filter(ProfileTask.id == task_id, ProfileTask.profile_id == template_id)
-        .first()
-    )
-    if task is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-
-    db.delete(task)
-    db.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.put("/{template_id}/tasks/bulk", response_model=List[ProfileTaskRead])
-def replace_template_tasks(
-    template_id: int, body: ProfileTasksBulkUpdate, db: Session = Depends(get_db)
-):
-    template = (
-        db.query(DeploymentProfile)
-        .filter(
-            DeploymentProfile.id == template_id,
-            DeploymentProfile.is_template.is_(True),
-        )
-        .first()
-    )
-    if template is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
-
-    db.query(ProfileTask).filter(ProfileTask.profile_id == template_id).delete()
-    created_tasks: list[ProfileTask] = []
-
-    for idx, task in enumerate(body.tasks):
-        action_type = task.action_type or "powershell_inline"
-        if task.script_id is not None:
-            _validate_script_reference(action_type, task.script_id, db)
-
-        created = ProfileTask(
-            profile_id=template_id,
-            name=(task.name or f"Task {idx + 1}"),
-            description=task.description,
-            order_index=task.order_index if task.order_index is not None else idx,
-            action_type=action_type,
-            script_id=task.script_id,
-            continue_on_error=True if task.continue_on_error is None else task.continue_on_error,
-        )
-        db.add(created)
-        created_tasks.append(created)
-
-    db.commit()
-    for task in created_tasks:
-        db.refresh(task)
-
-    return created_tasks
 
 
 @router.put("/{template_id}", response_model=DeploymentProfileRead)
