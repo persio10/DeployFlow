@@ -108,6 +108,13 @@ public class AgentService : BackgroundService
                         exitCode = 0;
                         logs = $"Test action executed on {Environment.MachineName} at {DateTimeOffset.UtcNow}. Payload: {action.Payload ?? "(none)"}";
                     }
+                    else if (string.Equals(action.Type, "agent_uninstall", StringComparison.OrdinalIgnoreCase))
+                    {
+                        status = "succeeded";
+                        exitCode = 0;
+                        logs = "Received agent uninstall request (stub). No uninstall performed in this build.";
+                        _logger.LogInformation("Agent uninstall requested for action {ActionId}. Reporting success (stub).", action.Id);
+                    }
                     else if (string.Equals(action.Type, "powershell_inline", StringComparison.OrdinalIgnoreCase))
                     {
                         if (string.IsNullOrWhiteSpace(action.Payload))

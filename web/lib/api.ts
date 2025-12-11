@@ -14,6 +14,7 @@ export interface Device {
   last_check_in?: string | null
   hardware_summary?: string | null
   profile_id?: number | null
+  is_deleted?: boolean
   created_at?: string
   updated_at?: string
 }
@@ -130,6 +131,15 @@ export async function fetchDevices(): Promise<Device[]> {
 export async function fetchDevice(deviceId: number): Promise<Device> {
   const res = await fetch(`${API_BASE_URL}/api/v1/devices/${deviceId}`, { cache: 'no-store' })
   return handleResponse<Device>(res)
+}
+
+export async function deleteDevice(deviceId: number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/devices/${deviceId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const text = await res.text()
+    const message = text || res.statusText
+    throw new Error(`API error (${res.status}): ${message}`)
+  }
 }
 
 export async function fetchDeviceActions(deviceId: number): Promise<Action[]> {

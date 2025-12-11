@@ -46,6 +46,7 @@ def register_agent(payload: AgentRegisterRequest, db: Session = Depends(get_db))
         device.last_check_in = now
         device.status = "online"
         device.os_type = payload.os_type or device.os_type or "windows"
+        device.is_deleted = False
     else:
         device = Device(
             hostname=payload.hostname,

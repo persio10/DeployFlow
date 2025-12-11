@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { fetchDevices, Device } from '@/lib/api'
+import { fetchDevices, deleteDevice, Device } from '@/lib/api'
 import { DeviceStatusBadge } from '@/components/DeviceStatusBadge'
 
 function formatDate(value?: string | null) {
@@ -14,6 +14,8 @@ export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -79,6 +81,29 @@ export default function DevicesPage() {
               >
                 View
               </Link>
+              <button
+                onClick={async () => {
+                  const confirmed = window.confirm(
+                    `Delete device ${device.hostname}? This will also queue a remote uninstall of the agent.`,
+                  )
+                  if (!confirmed) return
+                  setDeleteError(null)
+                  setDeletingId(device.id)
+                  try {
+                    await deleteDevice(device.id)
+                    setDevices((prev) => prev.filter((d) => d.id !== device.id))
+                  } catch (err) {
+                    const message = err instanceof Error ? err.message : 'Failed to delete device'
+                    setDeleteError(message)
+                  } finally {
+                    setDeletingId(null)
+                  }
+                }}
+                disabled={deletingId === device.id}
+                className="ml-2 rounded-md border border-red-500/50 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/10 disabled:opacity-50"
+              >
+                {deletingId === device.id ? 'Deleting…' : 'Delete'}
+              </button>
             </div>
           </div>
         ))}
@@ -89,6 +114,8 @@ export default function DevicesPage() {
           </div>
         )}
       </div>
+
+      {deleteError && <p className="text-sm text-rose-400">{deleteError}</p>}
     </div>
   )
 }

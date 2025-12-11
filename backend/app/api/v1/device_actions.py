@@ -14,7 +14,11 @@ router = APIRouter(prefix="/devices", tags=["device-actions"])
 
 @router.post("/{device_id}/actions", response_model=ActionRead, status_code=status.HTTP_201_CREATED)
 def create_action_for_device(device_id: int, body: ActionCreate, db: Session = Depends(get_db)):
-    device = db.query(Device).filter(Device.id == device_id).first()
+    device = (
+        db.query(Device)
+        .filter(Device.id == device_id, Device.is_deleted.is_(False))
+        .first()
+    )
     if device is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
 
@@ -61,7 +65,11 @@ def create_action_for_device(device_id: int, body: ActionCreate, db: Session = D
 
 @router.get("/{device_id}/actions", response_model=List[ActionRead])
 def list_actions_for_device(device_id: int, db: Session = Depends(get_db)):
-    device = db.query(Device).filter(Device.id == device_id).first()
+    device = (
+        db.query(Device)
+        .filter(Device.id == device_id, Device.is_deleted.is_(False))
+        .first()
+    )
     if device is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
 

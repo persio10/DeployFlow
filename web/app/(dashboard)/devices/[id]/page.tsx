@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import {
   Action,
   Device,
@@ -9,6 +9,7 @@ import {
   Script,
   applyProfile,
   createDeviceAction,
+  deleteDevice,
   fetchDevice,
   fetchDeviceActions,
   fetchProfiles,
@@ -25,6 +26,7 @@ function formatDate(value?: string | null) {
 
 export default function DeviceDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const paramId = params?.id
   const deviceId = useMemo(() => {
     const value = Array.isArray(paramId) ? paramId[0] : paramId
@@ -47,6 +49,9 @@ export default function DeviceDetailPage() {
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null)
   const [submittingProfile, setSubmittingProfile] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
+
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const [logAction, setLogAction] = useState<Action | null>(null)
 
@@ -157,6 +162,25 @@ export default function DeviceDetailPage() {
     return <div className="text-sm text-rose-400">{error ?? 'Device not found'}</div>
   }
 
+  const confirmDelete = async () => {
+    const confirmed = window.confirm(
+      `Delete device ${device.hostname}? This will queue a remote agent uninstall and remove it from the console.`,
+    )
+    if (!confirmed) return
+
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      await deleteDevice(device.id)
+      router.push('/devices')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete device'
+      setDeleteError(message)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900/40 p-5 shadow-sm md:flex-row md:items-center md:justify-between">
@@ -165,7 +189,16 @@ export default function DeviceDetailPage() {
           <h1 className="text-2xl font-semibold text-white">{device.hostname}</h1>
           <p className="text-xs text-zinc-500">ID: {device.id}</p>
         </div>
-        <DeviceStatusBadge status={device.status} osType={device.os_type} lastCheckIn={device.last_check_in} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={confirmDelete}
+            disabled={deleting}
+            className="rounded-md border border-red-500/50 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/10 disabled:opacity-50"
+          >
+            {deleting ? 'Deleting…' : 'Delete device'}
+          </button>
+          <DeviceStatusBadge status={device.status} osType={device.os_type} lastCheckIn={device.last_check_in} />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -257,6 +290,8 @@ export default function DeviceDetailPage() {
           </div>
         </div>
       </div>
+
+      {deleteError && <p className="text-sm text-rose-400">{deleteError}</p>}
 
       {profileModalOpen && (
         <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/60 px-4">
