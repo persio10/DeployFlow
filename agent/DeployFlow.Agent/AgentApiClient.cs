@@ -61,11 +61,17 @@ public class AgentApiClient
         };
 
         var response = await _httpClient.PostAsJsonAsync("/api/v1/agent/heartbeat", request, cancellationToken);
-        if (response.StatusCode == HttpStatusCode.NotFound)
+        if (response.StatusCode == HttpStatusCode.NotFound || response.StatusCode == HttpStatusCode.Gone)
         {
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogWarning("Heartbeat returned 404 for device {DeviceId}. Body: {Body}", deviceId, body);
-            throw new DeviceNotFoundException("Device not found during heartbeat");
+            _logger.LogWarning(
+                "Heartbeat returned {StatusCode} for device {DeviceId}. Body: {Body}",
+                response.StatusCode,
+                deviceId,
+                body);
+            throw new DeviceNotFoundException(
+                $"Device not found during heartbeat ({response.StatusCode})",
+                response.StatusCode);
         }
 
         if (!response.IsSuccessStatusCode)
@@ -101,8 +107,11 @@ public class AgentApiClient
 
     public class DeviceNotFoundException : Exception
     {
-        public DeviceNotFoundException(string message) : base(message)
+        public HttpStatusCode StatusCode { get; }
+
+        public DeviceNotFoundException(string message, HttpStatusCode statusCode) : base(message)
         {
+            StatusCode = statusCode;
         }
     }
 }

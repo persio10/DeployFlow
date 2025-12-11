@@ -74,9 +74,13 @@ public class AgentService : BackgroundService
             {
                 heartbeatResponse = await _apiClient.HeartbeatAsync(_deviceId, stoppingToken);
             }
-            catch (AgentApiClient.DeviceNotFoundException)
+            catch (AgentApiClient.DeviceNotFoundException ex)
             {
-                _logger.LogWarning("Heartbeat returned 404; device not found in backend. Re-registering...");
+                _logger.LogWarning(
+                    "Heartbeat returned {StatusCode}; device no longer exists in backend. Clearing state and re-registering...",
+                    ex.StatusCode);
+
+                _stateStore.Clear();
                 _deviceId = 0;
                 var registered = await RegisterAndPersistAsync(stoppingToken);
                 if (registered)

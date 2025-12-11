@@ -41,6 +41,7 @@ def register_agent(payload: AgentRegisterRequest, db: Session = Depends(get_db))
     device = db.query(Device).filter(Device.hostname == payload.hostname).first()
     os_type = payload.os_type or "windows"
     if device:
+        # Reactivate soft-deleted devices or update existing ones
         device.os_version = payload.os_version
         device.hardware_summary = payload.hardware_summary
         device.last_check_in = now
@@ -74,6 +75,11 @@ def heartbeat(payload: AgentHeartbeatRequest, db: Session = Depends(get_db)):
     device = db.query(Device).filter(Device.id == payload.device_id).first()
     if not device:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
+
+    if device.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE, detail="Device deleted"
+        )
 
     device.status = payload.status or device.status
     if payload.os_version:

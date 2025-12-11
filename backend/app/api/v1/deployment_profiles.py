@@ -167,7 +167,7 @@ def apply_profile_to_devices(profile_id: int, body: ApplyProfileRequest, db: Ses
 
     for device_id in body.device_ids:
         device = db.query(Device).filter(Device.id == device_id).first()
-        if device is None:
+        if device is None or device.is_deleted:
             continue
 
         if profile.target_os_type and device.os_type and profile.target_os_type != device.os_type:
