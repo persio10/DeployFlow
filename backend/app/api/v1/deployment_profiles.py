@@ -104,6 +104,13 @@ def get_profile(profile_id: int, db: Session = Depends(get_db)):
     profile = db.query(DeploymentProfile).filter(DeploymentProfile.id == profile_id).first()
     if profile is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+    tasks = (
+        db.query(ProfileTask)
+        .filter(ProfileTask.profile_id == profile_id)
+        .order_by(ProfileTask.order_index.asc(), ProfileTask.id.asc())
+        .all()
+    )
+    profile.tasks = tasks
     return profile
 
 
@@ -120,6 +127,41 @@ def list_profile_tasks(profile_id: int, db: Session = Depends(get_db)):
         .all()
     )
     return tasks
+
+
+@router.put("/{profile_id}/tasks/bulk", response_model=List[ProfileTaskRead])
+def replace_profile_tasks(
+    profile_id: int, body: ProfileTasksBulkUpdate, db: Session = Depends(get_db)
+):
+    profile = db.query(DeploymentProfile).filter(DeploymentProfile.id == profile_id).first()
+    if profile is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+
+    db.query(ProfileTask).filter(ProfileTask.profile_id == profile_id).delete()
+    created_tasks: list[ProfileTask] = []
+
+    for idx, task in enumerate(body.tasks):
+        action_type = task.action_type or "powershell_inline"
+        if task.script_id is not None:
+            _validate_script_reference(action_type, task.script_id, db)
+
+        created = ProfileTask(
+            profile_id=profile_id,
+            name=(task.name or f"Task {idx + 1}"),
+            description=task.description,
+            order_index=task.order_index if task.order_index is not None else idx,
+            action_type=action_type,
+            script_id=task.script_id,
+            continue_on_error=True if task.continue_on_error is None else task.continue_on_error,
+        )
+        db.add(created)
+        created_tasks.append(created)
+
+    db.commit()
+    for task in created_tasks:
+        db.refresh(task)
+
+    return created_tasks
 
 
 @router.post("/{profile_id}/tasks", response_model=ProfileTaskRead, status_code=status.HTTP_201_CREATED)
@@ -165,7 +207,9 @@ def update_profile_task(
     update_data = body.model_dump(exclude_unset=True)
 
     if "script_id" in update_data and update_data["script_id"] is not None:
-        _validate_script_reference(update_data.get("action_type", task.action_type), update_data["script_id"], db)
+        _validate_script_reference(
+            update_data.get("action_type", task.action_type), update_data["script_id"], db
+        )
 
     for key, value in update_data.items():
         setattr(task, key, value)
@@ -193,41 +237,6 @@ def delete_profile_task(profile_id: int, task_id: int, db: Session = Depends(get
     db.delete(task)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.put("/{profile_id}/tasks/bulk", response_model=List[ProfileTaskRead])
-def replace_profile_tasks(
-    profile_id: int, body: ProfileTasksBulkUpdate, db: Session = Depends(get_db)
-):
-    profile = db.query(DeploymentProfile).filter(DeploymentProfile.id == profile_id).first()
-    if profile is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
-
-    db.query(ProfileTask).filter(ProfileTask.profile_id == profile_id).delete()
-    created_tasks: list[ProfileTask] = []
-
-    for idx, task in enumerate(body.tasks):
-        action_type = task.action_type or "powershell_inline"
-        if task.script_id is not None:
-            _validate_script_reference(action_type, task.script_id, db)
-
-        created = ProfileTask(
-            profile_id=profile_id,
-            name=(task.name or f"Task {idx + 1}"),
-            description=task.description,
-            order_index=task.order_index if task.order_index is not None else idx,
-            action_type=action_type,
-            script_id=task.script_id,
-            continue_on_error=True if task.continue_on_error is None else task.continue_on_error,
-        )
-        db.add(created)
-        created_tasks.append(created)
-
-    db.commit()
-    for task in created_tasks:
-        db.refresh(task)
-
-    return created_tasks
 
 
 class ApplyProfileRequest(BaseModel):

@@ -2,7 +2,12 @@
 
 import { useMemo, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { DeploymentProfileWithTasks, deleteProfile, fetchProfile } from '@/lib/api'
+import {
+  DeploymentProfileWithTasks,
+  deleteProfile,
+  fetchProfile,
+  fetchProfileTasks,
+} from '@/lib/api'
 import { ProfileEditorModal } from '@/components/ProfileEditorModal'
 import { formatTargetOs } from '@/lib/osTypes'
 
@@ -33,7 +38,11 @@ export default function ProfileDetailPage() {
     const load = async () => {
       try {
         const data = await fetchProfile(profileId)
-        setProfile(data)
+        let tasks = data.tasks ?? []
+        if (!tasks.length) {
+          tasks = await fetchProfileTasks(profileId)
+        }
+        setProfile({ ...data, tasks })
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load profile'
         setError(message)
@@ -160,6 +169,7 @@ export default function ProfileDetailPage() {
         open={editOpen}
         variant="edit"
         initialProfile={profile}
+        initialTasks={profile.tasks}
         onClose={() => setEditOpen(false)}
         onSaved={(updated) => {
           setProfile(updated)

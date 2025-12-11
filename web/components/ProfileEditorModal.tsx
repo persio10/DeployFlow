@@ -29,6 +29,7 @@ interface ProfileEditorModalProps {
   mode?: ProfileEditorMode
   variant?: ProfileEditorVariant
   initialProfile?: DeploymentProfile | DeploymentProfileWithTasks | null
+  initialTasks?: ProfileTask[]
   onClose: () => void
   onCreated?: (profileId: number) => void
   onSaved?: (profile: DeploymentProfileWithTasks) => void
@@ -78,6 +79,7 @@ export function ProfileEditorModal({
   mode = 'profile',
   variant = 'create',
   initialProfile,
+  initialTasks,
 }: ProfileEditorModalProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -123,11 +125,13 @@ export function ProfileEditorModal({
               ? () => fetchTemplate(initialProfile.id)
               : () => fetchProfile(initialProfile.id)
           const fullProfile = await loader()
+          const taskSource = initialTasks ?? fullProfile.tasks ?? []
+
           setName(fullProfile.name)
           setDescription(fullProfile.description ?? '')
           setTargetOsType(fullProfile.target_os_type ?? '')
           setIsTemplate(fullProfile.is_template)
-          setTasks(normalizeOrder(mapTasksFromApi(fullProfile.tasks)))
+          setTasks(normalizeOrder(mapTasksFromApi(taskSource.length ? taskSource : fullProfile.tasks)))
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Failed to load profile'
           setError(message)

@@ -6,6 +6,7 @@ import {
   DeploymentProfileWithTasks,
   deleteTemplate,
   fetchTemplate,
+  fetchTemplateTasks,
   instantiateTemplate,
 } from '@/lib/api'
 import { ProfileEditorModal } from '@/components/ProfileEditorModal'
@@ -51,7 +52,11 @@ export default function TemplateDetailPage() {
     const load = async () => {
       try {
         const data = await fetchTemplate(templateId)
-        setTemplate(data)
+        let tasks = data.tasks ?? []
+        if (!tasks.length) {
+          tasks = await fetchTemplateTasks(templateId)
+        }
+        setTemplate({ ...data, tasks })
         setNewName(`${data.name} (copy)`)
         setNewDescription(data.description ?? '')
       } catch (err) {
@@ -254,6 +259,7 @@ export default function TemplateDetailPage() {
         mode="template"
         variant="edit"
         initialProfile={template}
+        initialTasks={template.tasks}
         onClose={() => setEditOpen(false)}
         onSaved={(updated) => {
           setTemplate(updated)
