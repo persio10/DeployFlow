@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,7 @@ from app.models.script import Script
 from app.schemas.deployment_profile import (
     DeploymentProfileCreate,
     DeploymentProfileRead,
+    DeploymentProfileUpdate,
     DeploymentProfileWithTasks,
     ProfileTaskCreate,
     ProfileTaskRead,
@@ -49,6 +50,32 @@ def create_profile(body: DeploymentProfileCreate, db: Session = Depends(get_db))
         target_os_type=body.target_os_type,
         is_template=body.is_template,
     )
+    db.add(profile)
+    db.commit()
+    db.refresh(profile)
+    return profile
+
+
+@router.put("/{profile_id}", response_model=DeploymentProfileRead)
+def update_profile(
+    profile_id: int, body: DeploymentProfileUpdate, db: Session = Depends(get_db)
+):
+    profile = db.query(DeploymentProfile).filter(DeploymentProfile.id == profile_id).first()
+    if profile is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+
+    update_data = body.model_dump(exclude_unset=True)
+
+    if "target_os_type" in update_data and update_data["target_os_type"] is not None:
+        if update_data["target_os_type"] not in ALLOWED_OS_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"target_os_type must be one of {', '.join(ALLOWED_OS_TYPES)}",
+            )
+
+    for key, value in update_data.items():
+        setattr(profile, key, value)
+
     db.add(profile)
     db.commit()
     db.refresh(profile)
@@ -174,3 +201,14 @@ def apply_profile_to_devices(profile_id: int, body: ApplyProfileRequest, db: Ses
     db.commit()
 
     return {"created_actions": len(created_actions)}
+
+
+@router.delete("/{profile_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_profile(profile_id: int, db: Session = Depends(get_db)):
+    profile = db.query(DeploymentProfile).filter(DeploymentProfile.id == profile_id).first()
+    if profile is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+
+    db.delete(profile)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

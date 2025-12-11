@@ -1,14 +1,16 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.core.constants import ALLOWED_OS_TYPES
 from app.db import get_db
 from app.models.deployment_profile import DeploymentProfile
 from app.models.profile_task import ProfileTask
 from app.schemas.deployment_profile import (
     DeploymentProfileRead,
+    DeploymentProfileUpdate,
     DeploymentProfileWithTasks,
 )
 
@@ -104,3 +106,57 @@ def instantiate_template(
     new_profile.tasks = tasks
 
     return new_profile
+
+
+@router.put("/{template_id}", response_model=DeploymentProfileRead)
+def update_template(
+    template_id: int, payload: DeploymentProfileUpdate, db: Session = Depends(get_db)
+):
+    template = (
+        db.query(DeploymentProfile)
+        .filter(
+            DeploymentProfile.id == template_id,
+            DeploymentProfile.is_template.is_(True),
+        )
+        .first()
+    )
+    if template is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    update_data.pop("is_template", None)
+
+    if "target_os_type" in update_data and update_data["target_os_type"] is not None:
+        if update_data["target_os_type"] not in ALLOWED_OS_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"target_os_type must be one of {', '.join(ALLOWED_OS_TYPES)}",
+            )
+
+    for key, value in update_data.items():
+        setattr(template, key, value)
+
+    template.is_template = True
+
+    db.add(template)
+    db.commit()
+    db.refresh(template)
+    return template
+
+
+@router.delete("/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_template(template_id: int, db: Session = Depends(get_db)):
+    template = (
+        db.query(DeploymentProfile)
+        .filter(
+            DeploymentProfile.id == template_id,
+            DeploymentProfile.is_template.is_(True),
+        )
+        .first()
+    )
+    if template is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+
+    db.delete(template)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

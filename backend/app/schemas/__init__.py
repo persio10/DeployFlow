@@ -2,6 +2,7 @@ from app.schemas.action import ActionCreate, ActionRead  # noqa: F401
 from app.schemas.deployment_profile import (  # noqa: F401
     DeploymentProfileCreate,
     DeploymentProfileRead,
+    DeploymentProfileUpdate,
     DeploymentProfileWithTasks,
     ProfileTaskCreate,
     ProfileTaskRead,

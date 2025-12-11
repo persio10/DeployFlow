@@ -46,6 +46,13 @@ class DeploymentProfileCreate(DeploymentProfileBase):
     pass
 
 
+class DeploymentProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    target_os_type: TargetOsType = None
+    is_template: Optional[bool] = None
+
+
 class DeploymentProfileRead(DeploymentProfileBase):
     id: int
     created_at: datetime
