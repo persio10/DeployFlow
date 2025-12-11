@@ -171,7 +171,12 @@ export default function DeviceDetailPage() {
     setDeleting(true)
     setDeleteError(null)
     try {
-      await deleteDevice(device.id)
+      const { status } = await deleteDevice(device.id)
+      const message =
+        status === 404 || status === 410
+          ? 'Device already removed. Redirecting to devices list.'
+          : 'Device deletion requested; agent uninstall will run on next check-in.'
+      window.alert(message)
       router.push('/devices')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete device'

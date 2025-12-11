@@ -133,13 +133,20 @@ export async function fetchDevice(deviceId: number): Promise<Device> {
   return handleResponse<Device>(res)
 }
 
-export async function deleteDevice(deviceId: number): Promise<void> {
+export async function deleteDevice(deviceId: number): Promise<{ status: number }> {
   const res = await fetch(`${API_BASE_URL}/api/v1/devices/${deviceId}`, { method: 'DELETE' })
+
+  if (res.status === 404 || res.status === 410) {
+    return { status: res.status }
+  }
+
   if (!res.ok) {
     const text = await res.text()
     const message = text || res.statusText
     throw new Error(`API error (${res.status}): ${message}`)
   }
+
+  return { status: res.status }
 }
 
 export async function fetchDeviceActions(deviceId: number): Promise<Action[]> {

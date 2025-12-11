@@ -16,6 +16,7 @@ export default function DevicesPage() {
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleteNotice, setDeleteNotice] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -88,10 +89,16 @@ export default function DevicesPage() {
                   )
                   if (!confirmed) return
                   setDeleteError(null)
+                  setDeleteNotice(null)
                   setDeletingId(device.id)
                   try {
-                    await deleteDevice(device.id)
+                    const { status } = await deleteDevice(device.id)
                     setDevices((prev) => prev.filter((d) => d.id !== device.id))
+                    if (status === 404 || status === 410) {
+                      setDeleteNotice('Device already removed. List refreshed.')
+                    } else {
+                      setDeleteNotice('Device deletion requested; agent uninstall will run on next check-in.')
+                    }
                   } catch (err) {
                     const message = err instanceof Error ? err.message : 'Failed to delete device'
                     setDeleteError(message)
@@ -116,6 +123,7 @@ export default function DevicesPage() {
       </div>
 
       {deleteError && <p className="text-sm text-rose-400">{deleteError}</p>}
+      {deleteNotice && <p className="text-sm text-emerald-300">{deleteNotice}</p>}
     </div>
   )
 }
