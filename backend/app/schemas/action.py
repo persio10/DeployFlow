@@ -8,6 +8,7 @@ class ActionCreate(BaseModel):
     type: str
     payload: Optional[str] = None
     script_id: Optional[int] = None
+    software_id: Optional[int] = None
 
 
 class ActionRead(BaseModel):
@@ -17,6 +18,7 @@ class ActionRead(BaseModel):
     status: str
     payload: Optional[str] = None
     script_id: Optional[int] = None
+    software_id: Optional[int] = None
     logs: Optional[str] = None
     created_at: datetime
     updated_at: datetime

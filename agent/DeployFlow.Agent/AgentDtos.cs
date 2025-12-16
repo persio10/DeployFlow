@@ -59,6 +59,9 @@ public class AgentActionPayload
 
     [JsonPropertyName("payload")]
     public string? Payload { get; set; }
+
+    [JsonPropertyName("software_id")]
+    public int? SoftwareId { get; set; }
 }
 
 public class AgentHeartbeatResponse

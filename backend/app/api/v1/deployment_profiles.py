@@ -1,5 +1,7 @@
 from typing import List
 
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -8,9 +10,10 @@ from app.core.constants import ALLOWED_OS_TYPES
 from app.db import get_db
 from app.models.action import ACTION_STATUS_PENDING, Action
 from app.models.deployment_profile import DeploymentProfile
-from app.models.profile_task import ProfileTask
 from app.models.device import Device
+from app.models.profile_task import ProfileTask
 from app.models.script import Script
+from app.models.software_package import SoftwarePackage
 from app.schemas.deployment_profile import (
     DeploymentProfileCreate,
     DeploymentProfileRead,
@@ -38,6 +41,20 @@ def _validate_script_reference(action_type: str, script_id: int, db: Session) ->
         )
 
     return script
+
+
+def _validate_software_reference(action_type: str, software_id: int, db: Session) -> SoftwarePackage:
+    software = db.query(SoftwarePackage).filter(SoftwarePackage.id == software_id).first()
+    if software is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Software not found")
+
+    if action_type != "install_software":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="software_id is only valid for install_software action_type",
+        )
+
+    return software
 
 
 @router.get("", response_model=List[DeploymentProfileRead])
@@ -144,6 +161,14 @@ def replace_profile_tasks(
         action_type = task.action_type or "powershell_inline"
         if task.script_id is not None:
             _validate_script_reference(action_type, task.script_id, db)
+        if task.software_id is not None:
+            _validate_software_reference(action_type, task.software_id, db)
+
+        if action_type == "install_software" and task.software_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="software_id is required for install_software tasks",
+            )
 
         created = ProfileTask(
             profile_id=profile_id,
@@ -152,6 +177,7 @@ def replace_profile_tasks(
             order_index=task.order_index if task.order_index is not None else idx,
             action_type=action_type,
             script_id=task.script_id,
+            software_id=task.software_id,
             continue_on_error=True if task.continue_on_error is None else task.continue_on_error,
         )
         db.add(created)
@@ -172,6 +198,14 @@ def create_profile_task(profile_id: int, body: ProfileTaskCreate, db: Session = 
 
     if body.script_id is not None:
         _validate_script_reference(body.action_type, body.script_id, db)
+    if body.software_id is not None:
+        _validate_software_reference(body.action_type, body.software_id, db)
+
+    if body.action_type == "install_software" and body.software_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="software_id is required for install_software tasks",
+        )
 
     task = ProfileTask(
         profile_id=profile_id,
@@ -180,6 +214,7 @@ def create_profile_task(profile_id: int, body: ProfileTaskCreate, db: Session = 
         order_index=body.order_index,
         action_type=body.action_type,
         script_id=body.script_id,
+        software_id=body.software_id,
         continue_on_error=body.continue_on_error,
     )
     db.add(task)
@@ -210,6 +245,17 @@ def update_profile_task(
         _validate_script_reference(
             update_data.get("action_type", task.action_type), update_data["script_id"], db
         )
+    if "software_id" in update_data and update_data["software_id"] is not None:
+        _validate_software_reference(
+            update_data.get("action_type", task.action_type), update_data["software_id"], db
+        )
+
+    if update_data.get("action_type", task.action_type) == "install_software":
+        if update_data.get("software_id") is None and task.software_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="software_id is required for install_software tasks",
+            )
 
     for key, value in update_data.items():
         setattr(task, key, value)
@@ -275,6 +321,33 @@ def apply_profile_to_devices(profile_id: int, body: ApplyProfileRequest, db: Ses
         for task in tasks:
             payload: str | None = None
             script_id: int | None = task.script_id
+            software_id: int | None = task.software_id
+
+            if task.action_type == "install_software":
+                if task.software_id is None:
+                    continue
+                software = (
+                    db.query(SoftwarePackage).filter(SoftwarePackage.id == task.software_id).first()
+                )
+                if software is None:
+                    continue
+
+                if software.target_os_type and device.os_type and software.target_os_type != device.os_type:
+                    continue
+
+                payload = json.dumps(
+                    {
+                        "software_id": software.id,
+                        "name": software.name,
+                        "installer_type": software.installer_type,
+                        "source_type": software.source_type,
+                        "source": software.source,
+                        "install_args": software.install_args,
+                        "uninstall_args": software.uninstall_args,
+                        "target_os": software.target_os_type,
+                        "version": software.version,
+                    }
+                )
 
             if task.script_id is not None:
                 script = db.query(Script).filter(Script.id == task.script_id).first()
@@ -293,11 +366,15 @@ def apply_profile_to_devices(profile_id: int, body: ApplyProfileRequest, db: Ses
                 # Skip tasks that require a script payload when none is available
                 continue
 
+            if task.action_type == "install_software" and payload is None:
+                continue
+
             action = Action(
                 device_id=device.id,
                 type=task.action_type,
                 payload=payload,
                 script_id=script_id,
+                software_id=software_id,
                 status=ACTION_STATUS_PENDING,
             )
             db.add(action)

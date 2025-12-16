@@ -18,6 +18,7 @@ class Action(Base):
     type = Column(String, nullable=False)
     payload = Column(Text, nullable=True)
     script_id = Column(Integer, ForeignKey("scripts.id"), nullable=True)
+    software_id = Column(Integer, ForeignKey("software_packages.id"), nullable=True)
     status = Column(String, nullable=False, default=ACTION_STATUS_PENDING)
     logs = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

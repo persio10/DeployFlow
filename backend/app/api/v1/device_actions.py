@@ -1,5 +1,6 @@
 from typing import List
 
+import json
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -7,6 +8,7 @@ from app.db import get_db
 from app.models.action import ACTION_STATUS_PENDING, Action
 from app.models.device import Device
 from app.models.script import Script
+from app.models.software_package import SoftwarePackage
 from app.schemas.action import ActionCreate, ActionRead
 
 router = APIRouter(prefix="/devices", tags=["device-actions"])
@@ -23,6 +25,39 @@ def create_action_for_device(device_id: int, body: ActionCreate, db: Session = D
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
 
     payload = body.payload
+    software_id = body.software_id
+
+    if body.type == "install_software":
+        if software_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="software_id is required for install_software actions",
+            )
+        software = (
+            db.query(SoftwarePackage).filter(SoftwarePackage.id == software_id).first()
+        )
+        if software is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Software not found"
+            )
+        if software.target_os_type and device.os_type and software.target_os_type != device.os_type:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Software target_os_type is not compatible with device os_type",
+            )
+
+        payload_dict = {
+            "software_id": software.id,
+            "name": software.name,
+            "installer_type": software.installer_type,
+            "source_type": software.source_type,
+            "source": software.source,
+            "install_args": software.install_args,
+            "uninstall_args": software.uninstall_args,
+            "target_os": software.target_os_type,
+            "version": software.version,
+        }
+        payload = json.dumps(payload_dict)
 
     if body.script_id is not None:
         script = db.query(Script).filter(Script.id == body.script_id).first()
@@ -45,7 +80,7 @@ def create_action_for_device(device_id: int, body: ActionCreate, db: Session = D
 
         payload = script.content
 
-    if payload is None:
+    if body.type in {"powershell_inline", "bash_inline"} and payload is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Either payload or script_id must be provided",
@@ -56,6 +91,7 @@ def create_action_for_device(device_id: int, body: ActionCreate, db: Session = D
         type=body.type,
         payload=payload,
         script_id=body.script_id,
+        software_id=software_id,
         status=ACTION_STATUS_PENDING,
     )
     db.add(action)

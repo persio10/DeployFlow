@@ -19,6 +19,7 @@ class ProfileTaskBase(BaseModel):
     order_index: int = 0
     action_type: str = "powershell_inline"
     script_id: Optional[int] = None
+    software_id: Optional[int] = None
     continue_on_error: bool = True
 
 
@@ -32,6 +33,7 @@ class ProfileTaskUpdate(BaseModel):
     order_index: Optional[int] = None
     action_type: Optional[str] = None
     script_id: Optional[int] = None
+    software_id: Optional[int] = None
     continue_on_error: Optional[bool] = None
 
 

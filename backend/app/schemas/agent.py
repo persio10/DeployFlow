@@ -29,6 +29,7 @@ class AgentActionPayload(BaseModel):
     id: int
     type: str
     payload: Optional[str] = None
+    software_id: Optional[int] = None
 
 
 class AgentHeartbeatResponse(BaseModel):

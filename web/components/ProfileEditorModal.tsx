@@ -6,6 +6,7 @@ import {
   fetchProfile,
   fetchProfileTasks,
   fetchScripts,
+  fetchSoftware,
   fetchTemplate,
   fetchTemplateTasks,
   replaceProfileTasks,
@@ -19,6 +20,7 @@ import {
   ProfileTask,
   ProfileTaskUpsertInput,
   Script,
+  SoftwarePackage,
   TargetOsType,
 } from '@/lib/api'
 import { TARGET_OS_OPTIONS } from '@/lib/osTypes'
@@ -39,6 +41,7 @@ interface ProfileEditorModalProps {
 
 interface TaskInput extends Omit<ProfileTaskUpsertInput, 'order_index'> {
   order_index?: number
+  software_id?: number | null
   localId: string
   collapsed?: boolean
 }
@@ -51,6 +54,7 @@ function defaultTask(order: number): TaskInput {
     order_index: order,
     action_type: 'powershell_inline',
     script_id: undefined,
+    software_id: undefined,
     continue_on_error: true,
     collapsed: false,
   }
@@ -67,6 +71,7 @@ function mapTasksFromApi(tasks?: ProfileTask[]): TaskInput[] {
     order_index: task.order_index ?? idx,
     action_type: task.action_type,
     script_id: task.script_id ?? undefined,
+    software_id: task.software_id ?? undefined,
     continue_on_error: task.continue_on_error,
     collapsed: true,
   }))
@@ -93,7 +98,9 @@ export function ProfileEditorModal({
   const [tasks, setTasks] = useState<TaskInput[]>([defaultTask(0)])
 
   const [scripts, setScripts] = useState<Script[]>([])
+  const [software, setSoftware] = useState<SoftwarePackage[]>([])
   const [loadingScripts, setLoadingScripts] = useState(false)
+  const [loadingSoftware, setLoadingSoftware] = useState(false)
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -112,14 +119,20 @@ export function ProfileEditorModal({
       setError(null)
       setSubmitting(false)
       setLoadingScripts(true)
+      setLoadingSoftware(true)
       try {
-        const data = await fetchScripts()
-        setScripts(data)
+        const [scriptsData, softwareData] = await Promise.all([
+          fetchScripts(),
+          fetchSoftware(),
+        ])
+        setScripts(scriptsData)
+        setSoftware(softwareData)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load scripts'
         setError(message)
       } finally {
         setLoadingScripts(false)
+        setLoadingSoftware(false)
       }
 
       if (variant === 'edit' && initialProfile) {
@@ -205,6 +218,7 @@ export function ProfileEditorModal({
       order_index: idx,
       action_type: task.action_type || 'powershell_inline',
       script_id: task.script_id ?? undefined,
+      software_id: task.software_id ?? undefined,
       continue_on_error: task.continue_on_error ?? true,
     }))
   }
@@ -212,6 +226,14 @@ export function ProfileEditorModal({
   const handleSubmit = async () => {
     if (!name.trim()) {
       setError('Name is required')
+      return
+    }
+
+    const missingSoftware = tasks.some(
+      (task) => task.action_type === 'install_software' && !task.software_id
+    )
+    if (missingSoftware) {
+      setError('Install software tasks require a software selection')
       return
     }
 
@@ -264,6 +286,14 @@ export function ProfileEditorModal({
     const found = scripts.find((s) => s.id === scriptId)
     if (!found) return `Script #${scriptId}`
     return `${found.name}${found.target_os_type ? ` (${found.target_os_type})` : ''}`
+  }
+
+  const getSoftwareSummary = (softwareId?: number | null) => {
+    if (!softwareId) return 'No software selected'
+    const found = software.find((s) => s.id === softwareId)
+    if (!found) return `Software #${softwareId}`
+    const versionLabel = found.version ? ` ${found.version}` : ''
+    return `${found.name}${versionLabel}${found.target_os_type ? ` (${found.target_os_type})` : ''}`
   }
 
   return (
@@ -357,16 +387,19 @@ export function ProfileEditorModal({
               <div className="max-h-[58vh] space-y-3 overflow-y-auto pr-1">
                 {tasks.map((task, idx) => {
                   const displayName = task.name?.trim() || `Task ${idx + 1}`
+                  const meta =
+                    task.action_type === 'install_software'
+                      ? `install_software · ${getSoftwareSummary(task.software_id)}`
+                      : `${task.action_type || 'powershell_inline'} · ${getScriptSummary(task.script_id)}`
                   return (
                     <div key={task.localId} className="rounded-lg border border-zinc-800 bg-zinc-900/70">
                       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 px-3 py-2 text-xs text-zinc-200">
                         <div className="flex min-w-[200px] flex-col gap-0.5 text-left">
                           <span className="text-sm font-semibold text-zinc-100">{displayName}</span>
-                          <span className="text-[11px] text-zinc-400">
-                            {task.action_type || 'powershell_inline'} · {getScriptSummary(task.script_id)}
-                          </span>
+                          <span className="text-[11px] text-zinc-400">{meta}</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                          <span className="rounded border border-zinc-700 px-2 py-1 text-zinc-400">Order {idx + 1}</span>
                           <button
                             type="button"
                             onClick={() => moveTask(task.localId, 'up')}
@@ -417,38 +450,73 @@ export function ProfileEditorModal({
                               <span className="text-xs uppercase tracking-wide text-zinc-400">Action type</span>
                               <select
                                 value={task.action_type}
-                                onChange={(e) => updateTask(task.localId, { action_type: e.target.value })}
+                                onChange={(e) => {
+                                  const nextType = e.target.value
+                                  updateTask(task.localId, {
+                                    action_type: nextType,
+                                    script_id: nextType === 'install_software' ? undefined : task.script_id,
+                                    software_id: nextType === 'install_software' ? task.software_id : undefined,
+                                  })
+                                }}
                                 className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
                               >
                                 <option value="powershell_inline">powershell_inline</option>
                                 <option value="bash_inline">bash_inline</option>
+                                <option value="install_software">install_software</option>
                               </select>
                             </label>
                           </div>
 
-                          <label className="block space-y-1">
-                            <span className="text-xs uppercase tracking-wide text-zinc-400">Script</span>
-                            <select
-                              value={task.script_id ?? ''}
-                              onChange={(e) =>
-                                updateTask(task.localId, {
-                                  script_id: e.target.value ? Number(e.target.value) : undefined,
-                                })
-                              }
-                              className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
-                              disabled={loadingScripts}
-                            >
-                              <option value="">Select script</option>
-                              {scripts.map((script) => (
-                                <option key={script.id} value={script.id}>
-                                  {script.name} {script.target_os_type ? `(${script.target_os_type})` : ''}
-                                </option>
-                              ))}
-                            </select>
-                            <p className="text-xs text-zinc-500">
-                              Scripts are pulled from the library. Create one first if you don't see it listed.
-                            </p>
-                          </label>
+                          {task.action_type === 'install_software' ? (
+                            <label className="block space-y-1">
+                              <span className="text-xs uppercase tracking-wide text-zinc-400">Software</span>
+                              <select
+                                value={task.software_id ?? ''}
+                                onChange={(e) =>
+                                  updateTask(task.localId, {
+                                    software_id: e.target.value ? Number(e.target.value) : undefined,
+                                  })
+                                }
+                                className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                                disabled={loadingSoftware}
+                              >
+                                <option value="">Select software</option>
+                                {software.map((item) => (
+                                  <option key={item.id} value={item.id}>
+                                    {item.name} {item.version ? `(${item.version})` : ''}
+                                  </option>
+                                ))}
+                              </select>
+                              <p className="text-xs text-zinc-500">
+                                Software definitions include installer metadata. Create one first if you don't see it listed.
+                              </p>
+                            </label>
+                          ) : (
+                            <label className="block space-y-1">
+                              <span className="text-xs uppercase tracking-wide text-zinc-400">Script</span>
+                              <select
+                                value={task.script_id ?? ''}
+                                onChange={(e) =>
+                                  updateTask(task.localId, {
+                                    script_id: e.target.value ? Number(e.target.value) : undefined,
+                                    software_id: undefined,
+                                  })
+                                }
+                                className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+                                disabled={loadingScripts}
+                              >
+                                <option value="">Select script</option>
+                                {scripts.map((script) => (
+                                  <option key={script.id} value={script.id}>
+                                    {script.name} {script.target_os_type ? `(${script.target_os_type})` : ''}
+                                  </option>
+                                ))}
+                              </select>
+                              <p className="text-xs text-zinc-500">
+                                Scripts are pulled from the library. Create one first if you don't see it listed.
+                              </p>
+                            </label>
+                          )}
 
                           <label className="block space-y-1">
                             <span className="text-xs uppercase tracking-wide text-zinc-400">Description</span>

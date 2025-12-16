@@ -6,4 +6,4 @@ from app.models.enrollment_token import EnrollmentToken  # noqa: E402,F401
 from app.models.os_image import OSImage  # noqa: E402,F401
 from app.models.profile_task import ProfileTask  # noqa: E402,F401
 from app.models.script import Script  # noqa: E402,F401
-from app.models.software_item import SoftwareItem  # noqa: E402,F401
+from app.models.software_package import SoftwarePackage  # noqa: E402,F401

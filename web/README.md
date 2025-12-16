@@ -19,10 +19,12 @@ npm run dev
 - **/profiles/[id]** — profile detail, tasks table, edit/delete actions, apply-from-device supported via device page.
 - **/templates** — template profiles (is_template=true) with target OS badges; create/edit/delete; templates can be instantiated into new profiles.
 - **/templates/[id]** — template detail, tasks table, edit/delete, “Use this template” to instantiate and redirect to the new profile.
+- **/software** — software catalog CRUD (create/edit/delete) with installer/source metadata and target OS badges.
+- **/software/[id]** — software detail with edit/delete controls.
 
 ## UI Notes
 - Dark layout with sidebar navigation, top nav, status badges (device/action), and reusable modals (script editor, profile editor, logs viewer).
 - Target OS selections use shared dropdown options (`windows`, `windows_server`, `ubuntu`, `debian`, `proxmox`, `rhel`, `centos`, `macos`, `other`).
 - Device deletion confirms before calling backend and shows a toast after success or failure.
 - Actions history includes colored status indicators and logs modal for inspecting stdout/stderr and exit codes returned by the agent.
-- Profile/Template editor loads existing tasks, allows add/remove/reorder, and saves via bulk task replace endpoints (`PUT /api/v1/profiles/{id}/tasks/bulk` or templates equivalent) so edits persist without rebuilding sequences.
+- Profile/Template editor loads existing tasks, allows add/remove/reorder, and saves via bulk task replace endpoints (`PUT /api/v1/profiles/{id}/tasks/bulk` or templates equivalent) so edits persist without rebuilding sequences. Tasks support script actions and `install_software` actions with a software dropdown.

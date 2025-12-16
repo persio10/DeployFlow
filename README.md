@@ -39,11 +39,11 @@ DeployFlow Fleet is a dark-mode-first platform for provisioning and managing Win
    - Auto re-registers if heartbeat gets 404/410 after a backend device delete or DB reset.
 
 ## Backend Highlights
-- **Models**: Device (with `os_type`, `os_version`, `hardware_summary`, `is_deleted`), Action (statuses pending/running/succeeded/failed), Script (language + `target_os_type`), DeploymentProfile + ProfileTask (ordered tasks, `is_template` for templates), EnrollmentToken, SoftwareItem, OSImage.
+- **Models**: Device (with `os_type`, `os_version`, `hardware_summary`, `is_deleted`), Action (statuses pending/running/succeeded/failed, optional `script_id`/`software_id`), Script (language + `target_os_type`), SoftwarePackage (installer type + source metadata), DeploymentProfile + ProfileTask (ordered tasks, `is_template` for templates, supports `install_software`), EnrollmentToken, OSImage.
 - **Agent API**: Register (`/api/v1/agent/register`), Heartbeat (`/api/v1/agent/heartbeat`, returns pending actions; 410 for deleted devices), Action result (`/api/v1/agent/actions/{id}/result`).
 - **Device API**: List/get/update (filters out `is_deleted`), delete queues an `agent_uninstall` action then marks the device deleted, actions endpoints to queue/list per device.
 - **Script Library**: Full CRUD with language + target OS validation; scripts can be referenced by actions or profile tasks.
-- **Profiles & Templates**: CRUD for deployment profiles (`/profiles`) and templates (`/templates`), tasks with script references, apply endpoint creates pending actions per device; templates can be instantiated into editable profiles.
+- **Profiles & Templates**: CRUD for deployment profiles (`/profiles`) and templates (`/templates`), tasks with script or software references, apply endpoint creates pending actions per device; templates can be instantiated into editable profiles.
 - **OS Validation**: Allowed OS values (`windows`, `windows_server`, `ubuntu`, `debian`, `proxmox`, `rhel`, `centos`, `macos`, `other`) and script languages (`powershell`, `bash`) enforced in schemas/endpoints.
 
 ## Agent Highlights

@@ -138,7 +138,7 @@ export default function ProfileDetailPage() {
                   <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">Order</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">Name</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">Action Type</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">Script ID</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">Reference</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">Continue on Error</th>
                 </tr>
               </thead>
@@ -148,7 +148,11 @@ export default function ProfileDetailPage() {
                     <td className="px-3 py-3 text-sm text-zinc-300">{task.order_index}</td>
                     <td className="px-3 py-3 text-sm font-semibold text-zinc-100">{task.name}</td>
                     <td className="px-3 py-3 text-sm text-zinc-300">{task.action_type}</td>
-                    <td className="px-3 py-3 text-sm text-zinc-300">{task.script_id ?? '—'}</td>
+                    <td className="px-3 py-3 text-sm text-zinc-300">
+                      {task.action_type === 'install_software'
+                        ? task.software_id ?? '—'
+                        : task.script_id ?? '—'}
+                    </td>
                     <td className="px-3 py-3 text-sm text-zinc-300">{task.continue_on_error ? 'Yes' : 'No'}</td>
                   </tr>
                 ))}

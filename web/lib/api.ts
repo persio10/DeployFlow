@@ -26,6 +26,7 @@ export interface Action {
   status: string
   payload?: string | null
   script_id?: number | null
+  software_id?: number | null
   logs?: string | null
   exit_code?: number | null
   created_at: string
@@ -92,6 +93,7 @@ export interface ProfileTask {
   order_index: number
   action_type: string
   script_id?: number | null
+  software_id?: number | null
   continue_on_error: boolean
   created_at: string
   updated_at: string
@@ -103,12 +105,45 @@ export interface ProfileTaskCreateInput {
   order_index?: number
   action_type?: string
   script_id?: number | null
+  software_id?: number | null
   continue_on_error?: boolean
 }
 
 export interface ProfileTaskUpsertInput extends ProfileTaskCreateInput {
   id?: number
 }
+
+export type InstallerType = 'msi' | 'exe' | 'winget' | 'choco' | 'script' | 'custom'
+export type SourceType = 'url' | 'file_share' | 'local_path'
+
+export interface SoftwarePackage {
+  id: number
+  name: string
+  slug?: string | null
+  version?: string | null
+  installer_type: InstallerType
+  source_type: SourceType
+  source?: string | null
+  install_args?: string | null
+  uninstall_args?: string | null
+  target_os_type?: TargetOsType | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SoftwareCreateInput {
+  name: string
+  slug?: string | null
+  version?: string | null
+  installer_type: InstallerType
+  source_type: SourceType
+  source?: string | null
+  install_args?: string | null
+  uninstall_args?: string | null
+  target_os_type?: TargetOsType | null
+}
+
+export interface SoftwareUpdateInput extends Partial<SoftwareCreateInput> {}
 
 export interface DeploymentProfileWithTasks extends DeploymentProfile {
   tasks: ProfileTask[]
@@ -161,7 +196,7 @@ export async function fetchDeviceActions(deviceId: number): Promise<Action[]> {
 
 export async function createDeviceAction(
   deviceId: number,
-  body: { type: string; payload?: string | null; script_id?: number | null }
+  body: { type: string; payload?: string | null; script_id?: number | null; software_id?: number | null }
 ): Promise<Action> {
   const res = await fetch(`${API_BASE_URL}/api/v1/devices/${deviceId}/actions`, {
     method: 'POST',
@@ -344,4 +379,44 @@ export async function replaceTemplateTasks(
     body: JSON.stringify({ tasks }),
   })
   return handleResponse<ProfileTask[]>(res)
+}
+
+export async function fetchSoftware(): Promise<SoftwarePackage[]> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/software`, { cache: 'no-store' })
+  return handleResponse<SoftwarePackage[]>(res)
+}
+
+export async function fetchSoftwareItem(id: number): Promise<SoftwarePackage> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/software/${id}`, { cache: 'no-store' })
+  return handleResponse<SoftwarePackage>(res)
+}
+
+export async function createSoftware(body: SoftwareCreateInput): Promise<SoftwarePackage> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/software`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return handleResponse<SoftwarePackage>(res)
+}
+
+export async function updateSoftware(
+  id: number,
+  body: SoftwareUpdateInput
+): Promise<SoftwarePackage> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/software/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  return handleResponse<SoftwarePackage>(res)
+}
+
+export async function deleteSoftware(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/software/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const text = await res.text()
+    const message = text || res.statusText
+    throw new Error(`API error (${res.status}): ${message}`)
+  }
 }

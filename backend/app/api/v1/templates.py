@@ -9,6 +9,7 @@ from app.db import get_db
 from app.models.deployment_profile import DeploymentProfile
 from app.models.profile_task import ProfileTask
 from app.models.script import Script
+from app.models.software_package import SoftwarePackage
 from app.schemas.deployment_profile import (
     DeploymentProfileRead,
     DeploymentProfileUpdate,
@@ -34,6 +35,20 @@ def _validate_script_reference(action_type: str, script_id: int, db: Session) ->
         )
 
     return script
+
+
+def _validate_software_reference(action_type: str, software_id: int, db: Session) -> SoftwarePackage:
+    software = db.query(SoftwarePackage).filter(SoftwarePackage.id == software_id).first()
+    if software is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Software not found")
+
+    if action_type != "install_software":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="software_id is only valid for install_software action_type",
+        )
+
+    return software
 
 
 @router.get("", response_model=List[DeploymentProfileRead])
@@ -113,6 +128,14 @@ def replace_template_tasks(
         action_type = task.action_type or "powershell_inline"
         if task.script_id is not None:
             _validate_script_reference(action_type, task.script_id, db)
+        if task.software_id is not None:
+            _validate_software_reference(action_type, task.software_id, db)
+
+        if action_type == "install_software" and task.software_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="software_id is required for install_software tasks",
+            )
 
         created = ProfileTask(
             profile_id=template_id,
@@ -121,6 +144,7 @@ def replace_template_tasks(
             order_index=task.order_index if task.order_index is not None else idx,
             action_type=action_type,
             script_id=task.script_id,
+            software_id=task.software_id,
             continue_on_error=True if task.continue_on_error is None else task.continue_on_error,
         )
         db.add(created)
@@ -150,6 +174,14 @@ def create_template_task(
 
     if body.script_id is not None:
         _validate_script_reference(body.action_type, body.script_id, db)
+    if body.software_id is not None:
+        _validate_software_reference(body.action_type, body.software_id, db)
+
+    if body.action_type == "install_software" and body.software_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="software_id is required for install_software tasks",
+        )
 
     task = ProfileTask(
         profile_id=template_id,
@@ -158,6 +190,7 @@ def create_template_task(
         order_index=body.order_index,
         action_type=body.action_type,
         script_id=body.script_id,
+        software_id=body.software_id,
         continue_on_error=body.continue_on_error,
     )
     db.add(task)
@@ -192,6 +225,18 @@ def update_template_task(
     update_data = body.model_dump(exclude_unset=True)
     if "script_id" in update_data and update_data["script_id"] is not None:
         _validate_script_reference(update_data.get("action_type", task.action_type), update_data["script_id"], db)
+
+    if "software_id" in update_data and update_data["software_id"] is not None:
+        _validate_software_reference(
+            update_data.get("action_type", task.action_type), update_data["software_id"], db
+        )
+
+    if update_data.get("action_type", task.action_type) == "install_software":
+        if update_data.get("software_id") is None and task.software_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="software_id is required for install_software tasks",
+            )
 
     for key, value in update_data.items():
         setattr(task, key, value)
@@ -274,6 +319,7 @@ def instantiate_template(
             order_index=task.order_index,
             action_type=task.action_type,
             script_id=task.script_id,
+            software_id=task.software_id,
             continue_on_error=task.continue_on_error,
         )
         db.add(cloned_task)

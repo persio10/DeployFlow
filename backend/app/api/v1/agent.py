@@ -98,7 +98,12 @@ def heartbeat(payload: AgentHeartbeatRequest, db: Session = Depends(get_db)):
     for action in pending_actions:
         action.status = ACTION_STATUS_RUNNING
         action_payloads.append(
-            AgentActionPayload(id=action.id, type=action.type, payload=action.payload)
+            AgentActionPayload(
+                id=action.id,
+                type=action.type,
+                payload=action.payload,
+                software_id=action.software_id,
+            )
         )
 
     db.commit()
